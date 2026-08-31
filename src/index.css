@@ -1,0 +1,102 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f4f6f5;
+  color: #1a1a1a;
+}
+
+.app {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px 16px 60px;
+}
+
+header h1 { font-size: 22px; margin-bottom: 2px; }
+.subtitle { color: #666; margin: 0 0 20px; text-transform: capitalize; }
+
+h2 { font-size: 16px; margin: 24px 0 10px; }
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.card.highlight { grid-column: 1 / -1; background: #0f766e; }
+.card.highlight .label { color: #d1fae5; }
+.card.highlight .value { color: white; font-size: 24px; }
+
+.label { font-size: 12px; color: #888; }
+.value { font-size: 18px; font-weight: 600; }
+.value.positive { color: #0f766e; }
+.value.negative { color: #b91c1c; }
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.category-btn {
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 10px;
+  padding: 10px 4px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.category-btn .emoji { font-size: 20px; }
+.category-btn.active { border-color: #0f766e; background: #ecfdf5; }
+
+.expense-form input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+.expense-form button[type='submit'] {
+  width: 100%;
+  padding: 12px;
+  background: #0f766e;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.expense-form button:disabled { opacity: 0.5; }
+
+.expense-list { list-style: none; padding: 0; margin: 0; }
+.expense-list li {
+  display: flex;
+  justify-content: space-between;
+  background: white;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.empty { color: #999; font-size: 14px; }
