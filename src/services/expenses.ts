@@ -14,14 +14,15 @@ export async function addExpense(
   categoria: ExpenseCategory,
   valor: number,
   descricao: string,
-  origem: 'app' | 'whatsapp' = 'app'
+  origem: 'app' | 'whatsapp' = 'app',
+  customDate?: Date
 ) {
   await addDoc(collection(db, EXPENSES_COLLECTION), {
     categoria,
     valor,
     descricao: descricao || '',
     origem,
-    createdAt: Timestamp.now(),
+    createdAt: customDate ? Timestamp.fromDate(customDate) : Timestamp.now(),
   })
 }
 

@@ -74,13 +74,13 @@ export async function getDailyProfit(date: Date = new Date()) {
   }
 }
 
-export async function addRevenue(valor: number, descricao: string) {
+export async function addRevenue(valor: number, descricao: string, customDate?: Date) {
   const { addDoc } = await import('firebase/firestore')
   await addDoc(collection(db, SALES_COLLECTION), {
     total: valor,
     lucro: valor,
     descricao: descricao || 'Receita registrada',
     status: 'ATIVO',
-    createdAt: Timestamp.now(),
+    createdAt: customDate ? Timestamp.fromDate(customDate) : Timestamp.now(),
   })
 }

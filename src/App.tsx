@@ -4,8 +4,7 @@ import { auth } from './firebase'
 import { Login } from './components/Login'
 import { getDailyProfit } from './services/sales'
 import { getTodayExpenses } from './services/expenses'
-import { RevenueModal } from './components/RevenueModal'
-import { ExpenseModal } from './components/ExpenseModal'
+import { TransactionModal } from './components/TransactionModal'
 import type { Expense } from './types'
 
 function formatBRL(n: number) {
@@ -30,12 +29,12 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-  // Visibilidade do saldo (ícone do olho 👁️)
+  // Visibilidade do saldo
   const [showBalance, setShowBalance] = useState(true)
 
-  // Modais de cadastro
-  const [isRevenueOpen, setIsRevenueOpen] = useState(false)
-  const [isExpenseOpen, setIsExpenseOpen] = useState(false)
+  // Modal de transação
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [modalType, setModalType] = useState<'despesa' | 'receita'>('despesa')
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -64,6 +63,11 @@ export default function App() {
   useEffect(() => {
     if (user) load()
   }, [user, load])
+
+  const openModal = (type: 'despesa' | 'receita') => {
+    setModalType(type)
+    setIsModalOpen(true)
+  }
 
   if (checkingAuth) return null
   if (!user) return <Login />
@@ -104,13 +108,13 @@ export default function App() {
       {/* Conteúdo Principal */}
       <main className="main-content">
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+          <div style={{ textAlign: 'center', padding: '40px 0', color: '#a1a1aa' }}>
             <p>Carregando finanças...</p>
           </div>
         ) : errorMsg ? (
-          <div style={{ padding: 16, background: '#fee2e2', color: '#991b1b', borderRadius: 16, margin: '16px 0', textAlign: 'center' }}>
+          <div style={{ padding: 16, background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', borderRadius: 16, margin: '16px 0', textAlign: 'center', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
             <p>{errorMsg}</p>
-            <button onClick={load} style={{ marginTop: 8, padding: '8px 16px', background: '#dc2626', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
+            <button onClick={load} style={{ marginTop: 8, padding: '8px 16px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
               Tentar novamente
             </button>
           </div>
@@ -152,12 +156,12 @@ export default function App() {
 
             {/* Botões de Ação embaixo */}
             <div className="action-buttons-group">
-              <button className="action-btn btn-revenue" onClick={() => setIsRevenueOpen(true)}>
+              <button className="action-btn btn-revenue" onClick={() => openModal('receita')}>
                 <span className="btn-icon-circle">+</span>
                 Registrar Receita
               </button>
 
-              <button className="action-btn btn-expense" onClick={() => setIsExpenseOpen(true)}>
+              <button className="action-btn btn-expense" onClick={() => openModal('despesa')}>
                 <span className="btn-icon-circle">-</span>
                 Registrar Despesa
               </button>
@@ -173,7 +177,7 @@ export default function App() {
               {expenses.length === 0 ? (
                 <div className="empty-state">
                   <p>Nenhuma despesa ou receita registrada hoje.</p>
-                  <span style={{ fontSize: 12, color: '#94a3b8', display: 'block', marginTop: 4 }}>
+                  <span style={{ fontSize: 12, color: '#71717a', display: 'block', marginTop: 4 }}>
                     Use os botões acima para registrar.
                   </span>
                 </div>
@@ -206,16 +210,11 @@ export default function App() {
         )}
       </main>
 
-      {/* Modais de Cadastro */}
-      <RevenueModal
-        isOpen={isRevenueOpen}
-        onClose={() => setIsRevenueOpen(false)}
-        onAdded={load}
-      />
-
-      <ExpenseModal
-        isOpen={isExpenseOpen}
-        onClose={() => setIsExpenseOpen(false)}
+      {/* Modal de Cadastro Dark com Seletor de Data e Teclado Numérico */}
+      <TransactionModal
+        isOpen={isModalOpen}
+        defaultType={modalType}
+        onClose={() => setIsModalOpen(false)}
         onAdded={load}
       />
     </div>
