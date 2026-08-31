@@ -3,9 +3,10 @@ import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
 import { auth } from './firebase'
 import { Login } from './components/Login'
 import { getDailyProfit } from './services/sales'
-import { getTodayExpenses } from './services/expenses'
+import { getAllExpenses, deleteExpense } from './services/expenses'
 import { TransactionModal } from './components/TransactionModal'
 import { CategoryEditModal } from './components/CategoryEditModal'
+import { BalanceEditModal } from './components/BalanceEditModal'
 import { getStoredCategories } from './services/categories'
 import type { Expense } from './types'
 
@@ -15,9 +16,19 @@ function formatBRL(n: number) {
 
 function getCategoryMeta(catId: string) {
   const categories = getStoredCategories()
-  const found = categories.find((c) => c.id === catId || c.id === catId.toLowerCase())
+  const found = categories.find((c) => c.id === catId || c.id === catId?.toLowerCase())
   if (found) return found
   return { id: catId, label: catId, emoji: '📦' }
+}
+
+function formatDate(dateObj: any) {
+  let d: Date | null = null
+  if (dateObj?.toDate) d = dateObj.toDate()
+  else if (dateObj?.seconds) d = new Date(dateObj.seconds * 1000)
+  else if (dateObj) d = new Date(dateObj)
+
+  if (!d) return ''
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
 export default function App() {
@@ -30,6 +41,11 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
+  // Saldo Ajuste (Local Storage)
+  const [saldoAjuste, setSaldoAjuste] = useState(() => {
+    return parseFloat(localStorage.getItem('saldo_ajuste') || '0')
+  })
+
   // Visibilidade do saldo
   const [showBalance, setShowBalance] = useState(true)
 
@@ -37,6 +53,7 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalType, setModalType] = useState<'despesa' | 'receita'>('despesa')
   const [isCategoryEditOpen, setIsCategoryEditOpen] = useState(false)
+  const [isBalanceEditOpen, setIsBalanceEditOpen] = useState(false)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -50,7 +67,7 @@ export default function App() {
     setLoading(true)
     setErrorMsg(null)
     try {
-      const [profit, exps] = await Promise.all([getDailyProfit(), getTodayExpenses()])
+      const [profit, exps] = await Promise.all([getDailyProfit(), getAllExpenses()])
       setLucro(profit.lucro)
       setFaturamento(profit.faturamento)
       setExpenses(exps)
@@ -66,6 +83,16 @@ export default function App() {
     if (user) load()
   }, [user, load])
 
+  const handleDeleteExpense = async (id?: string) => {
+    if (!id) return
+    try {
+      await deleteExpense(id)
+      load()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   const openModal = (type: 'despesa' | 'receita') => {
     setModalType(type)
     setIsModalOpen(true)
@@ -76,7 +103,7 @@ export default function App() {
 
   const totalDespesas = expenses.reduce((sum, e) => sum + e.valor, 0)
   const receitas = faturamento > 0 ? faturamento : lucro
-  const saldoAtual = receitas - totalDespesas
+  const saldoAtual = saldoAjuste + receitas - totalDespesas
 
   const currentMonthName = new Date().toLocaleDateString('pt-BR', { month: 'long' })
   const capitalizedMonth = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1)
@@ -135,6 +162,15 @@ export default function App() {
             <div className="balance-card">
               <div className="balance-header">
                 <span>Saldo</span>
+                <button
+                  type="button"
+                  className="eye-btn"
+                  style={{ marginLeft: 6, fontSize: 14 }}
+                  title="Editar ou Zerar Saldo"
+                  onClick={() => setIsBalanceEditOpen(true)}
+                >
+                  ✏️
+                </button>
               </div>
 
               <div className={`balance-amount ${!showBalance ? 'hidden-val' : ''}`}>
@@ -178,16 +214,16 @@ export default function App() {
               </button>
             </div>
 
-            {/* Extrato / Lista de Movimentações */}
+            {/* Extrato / Histórico de Movimentações */}
             <section>
               <div className="section-title">
-                <h2>Movimentações do dia</h2>
+                <h2>Histórico de Despesas</h2>
                 <span className="badge-count">{expenses.length} lançamentos</span>
               </div>
 
               {expenses.length === 0 ? (
                 <div className="empty-state">
-                  <p>Nenhuma despesa ou receita registrada hoje.</p>
+                  <p>Nenhuma despesa registrada ainda.</p>
                   <span style={{ fontSize: 12, color: '#71717a', display: 'block', marginTop: 4 }}>
                     Use os botões acima para registrar.
                   </span>
@@ -196,6 +232,7 @@ export default function App() {
                 <div className="transactions-list">
                   {expenses.map((e) => {
                     const catMeta = getCategoryMeta(e.categoria)
+                    const formattedDateStr = formatDate(e.createdAt)
                     return (
                       <div key={e.id} className="transaction-card">
                         <div className="tx-info">
@@ -209,10 +246,24 @@ export default function App() {
                             {e.descricao && (
                               <div className="tx-sub">{e.descricao}</div>
                             )}
+                            {formattedDateStr && (
+                              <div className="tx-sub" style={{ fontSize: 11, color: '#71717a' }}>{formattedDateStr}</div>
+                            )}
                           </div>
                         </div>
-                        <div className="tx-amount expense">
-                          - {showBalance ? formatBRL(e.valor) : '•••••'}
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div className="tx-amount expense">
+                            - {showBalance ? formatBRL(e.valor) : '•••••'}
+                          </div>
+                          <button
+                            type="button"
+                            style={{ background: 'none', border: 'none', color: '#71717a', fontSize: 14, cursor: 'pointer', padding: 4 }}
+                            title="Excluir lançamento"
+                            onClick={() => handleDeleteExpense(e.id)}
+                          >
+                            🗑️
+                          </button>
                         </div>
                       </div>
                     )
@@ -232,11 +283,22 @@ export default function App() {
         onAdded={load}
       />
 
-      {/* Modal de Edição Geral de Categorias */}
+      {/* Modal de Edição de Categorias */}
       <CategoryEditModal
         isOpen={isCategoryEditOpen}
         onClose={() => setIsCategoryEditOpen(false)}
         onUpdated={load}
+      />
+
+      {/* Modal de Zerar/Editar Saldo */}
+      <BalanceEditModal
+        isOpen={isBalanceEditOpen}
+        currentNetBalance={receitas - totalDespesas}
+        onClose={() => setIsBalanceEditOpen(false)}
+        onUpdated={(newAjuste) => {
+          setSaldoAjuste(newAjuste)
+          load()
+        }}
       />
     </div>
   )

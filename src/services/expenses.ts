@@ -38,45 +38,37 @@ function endOfDay(date: Date) {
   return d
 }
 
-export async function getTodayExpenses(date: Date = new Date()): Promise<Expense[]> {
+export async function getAllExpenses(): Promise<Expense[]> {
   try {
-    const start = startOfDay(date)
-    const end = endOfDay(date)
-
-    let snap
-    try {
-      const q = query(
-        collection(db, EXPENSES_COLLECTION),
-        where('createdAt', '>=', Timestamp.fromDate(start)),
-        where('createdAt', '<=', Timestamp.fromDate(end)),
-        orderBy('createdAt', 'desc')
-      )
-      snap = await getDocs(q)
-    } catch (e) {
-      console.warn("Query ordenada de despesas falhou (possível falta de índice). Buscando coleção inteira:", e)
-      snap = await getDocs(collection(db, EXPENSES_COLLECTION))
-    }
-
+    const snap = await getDocs(collection(db, EXPENSES_COLLECTION))
     const expenses: Expense[] = []
     snap.docs.forEach((doc) => {
-      const data = doc.data() as any
-      let expDate: Date | null = null
-      if (data.createdAt?.toDate) {
-        expDate = data.createdAt.toDate()
-      } else if (data.createdAt?.seconds) {
-        expDate = new Date(data.createdAt.seconds * 1000)
-      } else if (data.createdAt) {
-        expDate = new Date(data.createdAt)
-      }
+      expenses.push({ id: doc.id, ...(doc.data() as Expense) })
+    })
 
-      if (!expDate || (expDate >= start && expDate <= end)) {
-        expenses.push({ id: doc.id, ...data })
+    // Ordena por data decrescente
+    expenses.sort((a, b) => {
+      const getMs = (item: any) => {
+        if (item.createdAt?.toDate) return item.createdAt.toDate().getTime()
+        if (item.createdAt?.seconds) return item.createdAt.seconds * 1000
+        if (item.createdAt) return new Date(item.createdAt).getTime()
+        return 0
       }
+      return getMs(b) - getMs(a)
     })
 
     return expenses
   } catch (err) {
-    console.error("Erro ao carregar despesas de hoje:", err)
+    console.error("Erro ao carregar todas as despesas:", err)
     return []
   }
+}
+
+export async function getTodayExpenses(): Promise<Expense[]> {
+  return getAllExpenses()
+}
+
+export async function deleteExpense(id: string) {
+  const { doc, deleteDoc } = await import('firebase/firestore')
+  await deleteDoc(doc(db, EXPENSES_COLLECTION, id))
 }
