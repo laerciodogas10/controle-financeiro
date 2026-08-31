@@ -5,8 +5,7 @@ import { Login } from './components/Login'
 import { getDailyProfit } from './services/sales'
 import { getAllExpenses, deleteExpense } from './services/expenses'
 import { TransactionModal } from './components/TransactionModal'
-import { CategoryEditModal } from './components/CategoryEditModal'
-import { BalanceEditModal } from './components/BalanceEditModal'
+import { SettingsModal } from './components/SettingsModal'
 import { getStoredCategories } from './services/categories'
 import type { Expense } from './types'
 
@@ -52,8 +51,7 @@ export default function App() {
   // Modais
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalType, setModalType] = useState<'despesa' | 'receita'>('despesa')
-  const [isCategoryEditOpen, setIsCategoryEditOpen] = useState(false)
-  const [isBalanceEditOpen, setIsBalanceEditOpen] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -114,11 +112,11 @@ export default function App() {
       <header className="top-bar">
         <div className="user-profile">
           <div className="avatar">
-            {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
+            L
           </div>
           <div className="user-info">
             <span className="greeting">Bem-vindo(a)</span>
-            <span className="user-name">Controle Financeiro</span>
+            <span className="user-name">Láercio</span>
           </div>
         </div>
 
@@ -126,10 +124,10 @@ export default function App() {
           <button
             type="button"
             className="month-selector"
-            title="Editar Categorias"
-            onClick={() => setIsCategoryEditOpen(true)}
+            title="Definições (Saldo & Categorias)"
+            onClick={() => setIsSettingsOpen(true)}
           >
-            <span>⚙️ Categorias</span>
+            <span>⚙️ Definições</span>
           </button>
 
           <div className="month-selector">
@@ -162,15 +160,6 @@ export default function App() {
             <div className="balance-card">
               <div className="balance-header">
                 <span>Saldo</span>
-                <button
-                  type="button"
-                  className="eye-btn"
-                  style={{ marginLeft: 6, fontSize: 14 }}
-                  title="Editar ou Zerar Saldo"
-                  onClick={() => setIsBalanceEditOpen(true)}
-                >
-                  ✏️
-                </button>
               </div>
 
               <div className={`balance-amount ${!showBalance ? 'hidden-val' : ''}`}>
@@ -283,22 +272,16 @@ export default function App() {
         onAdded={load}
       />
 
-      {/* Modal de Edição de Categorias */}
-      <CategoryEditModal
-        isOpen={isCategoryEditOpen}
-        onClose={() => setIsCategoryEditOpen(false)}
-        onUpdated={load}
-      />
-
-      {/* Modal de Zerar/Editar Saldo */}
-      <BalanceEditModal
-        isOpen={isBalanceEditOpen}
+      {/* Modal Unificado de Definições (Saldo & Categorias) */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
         currentNetBalance={receitas - totalDespesas}
-        onClose={() => setIsBalanceEditOpen(false)}
-        onUpdated={(newAjuste) => {
+        onClose={() => setIsSettingsOpen(false)}
+        onBalanceUpdated={(newAjuste) => {
           setSaldoAjuste(newAjuste)
           load()
         }}
+        onCategoriesUpdated={load}
       />
     </div>
   )
