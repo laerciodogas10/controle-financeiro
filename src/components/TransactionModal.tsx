@@ -35,18 +35,17 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
 
   if (!isOpen) return null
 
-  // Format integer cents string into BRL string (e.g., "1500" -> "15,00")
+  // Trata o número inteiro (sem centavos)
   const getFormattedValue = () => {
     const numeric = parseInt(amountStr || '0', 10)
-    const val = numeric / 100
-    return val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    return numeric.toLocaleString('pt-BR')
   }
 
   const getNumericValue = () => {
-    return parseInt(amountStr || '0', 10) / 100
+    return parseInt(amountStr || '0', 10)
   }
 
-  // Keypad Handlers
+  // Teclado Numérico
   const handleKeyClick = (key: string) => {
     if (key === 'backspace') {
       if (amountStr.length <= 1) {
@@ -56,6 +55,10 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
       }
     } else if (key === 'clear') {
       setAmountStr('0')
+    } else if (key === '00') {
+      if (amountStr !== '0' && amountStr.length < 8) {
+        setAmountStr(amountStr + '00')
+      }
     } else if (/^[0-9]$/.test(key)) {
       if (amountStr === '0') {
         setAmountStr(key)
@@ -65,7 +68,7 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
     }
   }
 
-  // Date selection handler
+  // Manipulação de Datas
   const handleDateModeChange = (mode: 'hoje' | 'ontem' | 'outros') => {
     setDateMode(mode)
     if (mode === 'hoje') {
@@ -95,7 +98,7 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
       } else {
         await addRevenue(val, descricao, customDate)
       }
-      // Reset form
+      // Limpa formulário
       setAmountStr('0')
       setDescricao('')
       setDateMode('hoje')
@@ -115,13 +118,13 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
     <>
       <div className="dark-modal-overlay" onClick={onClose}>
         <div className="dark-modal-container" onClick={(e) => e.stopPropagation()}>
-          {/* Top Bar */}
+          {/* Barra Superior */}
           <div className="dark-modal-topbar">
             <button className="dark-cancel-link" onClick={onClose}>
               Cancelar
             </button>
 
-            {/* Type selector toggle */}
+            {/* Alternador de Tipo */}
             <div className="type-toggle-dropdown">
               <button
                 type="button"
@@ -133,7 +136,7 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
             </div>
           </div>
 
-          {/* Amount Display Header */}
+          {/* Exibição do Valor (Sem botão BRL e sem centavos) */}
           <div className="dark-amount-section">
             <span className="dark-amount-label">
               {isDespesa ? 'Valor da despesa' : 'Valor da receita'}
@@ -142,13 +145,12 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
               <div className="dark-amount-value">
                 R$ {getFormattedValue()}
               </div>
-              <span className="currency-badge">BRL ▾</span>
             </div>
           </div>
 
-          {/* Form Controls Section */}
+          {/* Campos do Formulário */}
           <div className="dark-form-body">
-            {/* Date Selector Row */}
+            {/* Seletor de Data */}
             <div className="dark-input-row">
               <span className="row-icon">📅</span>
               <div className="date-pills-group">
@@ -178,7 +180,7 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
               </div>
             </div>
 
-            {/* Description Row */}
+            {/* Descrição */}
             <div className="dark-input-row">
               <span className="row-icon">✏️</span>
               <input
@@ -190,7 +192,7 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
               />
             </div>
 
-            {/* Category Selector (if Expense) */}
+            {/* Categorias (Despesa) */}
             {isDespesa && (
               <div className="dark-input-row category-row">
                 <span className="row-icon">🏷️</span>
@@ -211,7 +213,7 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
             )}
           </div>
 
-          {/* Numeric Keypad Component */}
+          {/* Teclado Numérico */}
           <div className="numeric-keypad">
             <div className="keypad-row">
               <button type="button" onClick={() => handleKeyClick('7')}>7</button>
@@ -236,7 +238,7 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
             </div>
           </div>
 
-          {/* Bottom Action Buttons */}
+          {/* Ações Inferiores */}
           <div className="dark-modal-actions">
             <button type="button" className="dark-btn-outline" onClick={onClose}>
               Cancelar
@@ -253,7 +255,7 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
         </div>
       </div>
 
-      {/* Custom Wheel Date Picker Modal */}
+      {/* Roleta de Data */}
       <DatePickerModal
         isOpen={isDatePickerOpen}
         initialDate={customDate}
