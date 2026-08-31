@@ -5,18 +5,19 @@ import { Login } from './components/Login'
 import { getDailyProfit } from './services/sales'
 import { getTodayExpenses } from './services/expenses'
 import { TransactionModal } from './components/TransactionModal'
+import { CategoryEditModal } from './components/CategoryEditModal'
+import { getStoredCategories } from './services/categories'
 import type { Expense } from './types'
 
 function formatBRL(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-const CATEGORY_EMOJIS: Record<string, string> = {
-  mercado: '🛒',
-  energia: '⚡',
-  agua: '💧',
-  gasolina: '⛽',
-  outros: '📦',
+function getCategoryMeta(catId: string) {
+  const categories = getStoredCategories()
+  const found = categories.find((c) => c.id === catId || c.id === catId.toLowerCase())
+  if (found) return found
+  return { id: catId, label: catId, emoji: '📦' }
 }
 
 export default function App() {
@@ -32,9 +33,10 @@ export default function App() {
   // Visibilidade do saldo
   const [showBalance, setShowBalance] = useState(true)
 
-  // Modal de transação
+  // Modais
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalType, setModalType] = useState<'despesa' | 'receita'>('despesa')
+  const [isCategoryEditOpen, setIsCategoryEditOpen] = useState(false)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -81,7 +83,7 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {/* Header Superior estilo App */}
+      {/* Header Superior */}
       <header className="top-bar">
         <div className="user-profile">
           <div className="avatar">
@@ -94,6 +96,15 @@ export default function App() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            type="button"
+            className="month-selector"
+            title="Editar Categorias"
+            onClick={() => setIsCategoryEditOpen(true)}
+          >
+            <span>⚙️ Categorias</span>
+          </button>
+
           <div className="month-selector">
             <span>{capitalizedMonth}</span>
             <span style={{ fontSize: 10 }}>▼</span>
@@ -183,26 +194,29 @@ export default function App() {
                 </div>
               ) : (
                 <div className="transactions-list">
-                  {expenses.map((e) => (
-                    <div key={e.id} className="transaction-card">
-                      <div className="tx-info">
-                        <div className="tx-icon expense">
-                          {CATEGORY_EMOJIS[e.categoria] || '📦'}
-                        </div>
-                        <div>
-                          <div className="tx-title" style={{ textTransform: 'capitalize' }}>
-                            {e.categoria}
+                  {expenses.map((e) => {
+                    const catMeta = getCategoryMeta(e.categoria)
+                    return (
+                      <div key={e.id} className="transaction-card">
+                        <div className="tx-info">
+                          <div className="tx-icon expense">
+                            {catMeta.emoji}
                           </div>
-                          {e.descricao && (
-                            <div className="tx-sub">{e.descricao}</div>
-                          )}
+                          <div>
+                            <div className="tx-title" style={{ textTransform: 'capitalize' }}>
+                              {catMeta.label}
+                            </div>
+                            {e.descricao && (
+                              <div className="tx-sub">{e.descricao}</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="tx-amount expense">
+                          - {showBalance ? formatBRL(e.valor) : '•••••'}
                         </div>
                       </div>
-                      <div className="tx-amount expense">
-                        - {showBalance ? formatBRL(e.valor) : '•••••'}
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </section>
@@ -210,12 +224,19 @@ export default function App() {
         )}
       </main>
 
-      {/* Modal de Cadastro Dark com Seletor de Data e Teclado Numérico */}
+      {/* Modal de Transação */}
       <TransactionModal
         isOpen={isModalOpen}
         defaultType={modalType}
         onClose={() => setIsModalOpen(false)}
         onAdded={load}
+      />
+
+      {/* Modal de Edição Geral de Categorias */}
+      <CategoryEditModal
+        isOpen={isCategoryEditOpen}
+        onClose={() => setIsCategoryEditOpen(false)}
+        onUpdated={load}
       />
     </div>
   )

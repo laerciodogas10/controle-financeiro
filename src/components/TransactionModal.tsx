@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { addExpense } from '../services/expenses'
 import { addRevenue } from '../services/sales'
 import { DatePickerModal } from './DatePickerModal'
+import { CategoryEditModal } from './CategoryEditModal'
+import { getStoredCategories, CategoryItem } from '../services/categories'
 import type { ExpenseCategory } from '../types'
 
 interface Props {
@@ -11,19 +13,16 @@ interface Props {
   onAdded: () => void
 }
 
-const CATEGORIES: { id: ExpenseCategory; label: string; emoji: string }[] = [
-  { id: 'mercado', label: 'Mercado', emoji: '🛒' },
-  { id: 'energia', label: 'Energia', emoji: '⚡' },
-  { id: 'agua', label: 'Água', emoji: '💧' },
-  { id: 'gasolina', label: 'Gasolina', emoji: '⛽' },
-  { id: 'outros', label: 'Outros', emoji: '📦' },
-]
-
 export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onAdded }: Props) {
   const [type, setType] = useState<'despesa' | 'receita'>(defaultType)
   const [amountStr, setAmountStr] = useState('0')
   const [descricao, setDescricao] = useState('')
-  const [categoria, setCategoria] = useState<ExpenseCategory>('mercado')
+  
+  // Categorias Dinâmicas
+  const [categories, setCategories] = useState<CategoryItem[]>(getStoredCategories())
+  const [categoria, setCategoria] = useState<string>('')
+  const [isCategoryEditOpen, setIsCategoryEditOpen] = useState(false)
+
   const [dateMode, setDateMode] = useState<'hoje' | 'ontem' | 'outros'>('hoje')
   const [customDate, setCustomDate] = useState<Date>(new Date())
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
@@ -31,7 +30,20 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
 
   useEffect(() => {
     setType(defaultType)
-  }, [defaultType])
+    const stored = getStoredCategories()
+    setCategories(stored)
+    if (stored.length > 0 && !categoria) {
+      setCategoria(stored[0].id)
+    }
+  }, [defaultType, isOpen])
+
+  const refreshCategories = () => {
+    const updated = getStoredCategories()
+    setCategories(updated)
+    if (updated.length > 0) {
+      setCategoria(updated[0].id)
+    }
+  }
 
   if (!isOpen) return null
 
@@ -94,7 +106,7 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
     setSaving(true)
     try {
       if (type === 'despesa') {
-        await addExpense(categoria, val, descricao, 'app', customDate)
+        await addExpense((categoria || 'outros') as ExpenseCategory, val, descricao, 'app', customDate)
       } else {
         await addRevenue(val, descricao, customDate)
       }
@@ -136,7 +148,7 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
             </div>
           </div>
 
-          {/* Exibição do Valor (Sem botão BRL e sem centavos) */}
+          {/* Exibição do Valor */}
           <div className="dark-amount-section">
             <span className="dark-amount-label">
               {isDespesa ? 'Valor da despesa' : 'Valor da receita'}
@@ -192,12 +204,25 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
               />
             </div>
 
-            {/* Categorias (Despesa) */}
+            {/* Categorias com Botão de Editar ⚙️ */}
             {isDespesa && (
-              <div className="dark-input-row category-row">
-                <span className="row-icon">🏷️</span>
-                <div className="dark-category-pills">
-                  {CATEGORIES.map((c) => (
+              <div className="dark-input-row category-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span className="row-icon">🏷️</span>
+                    <span style={{ fontSize: 13, color: '#a1a1aa', fontWeight: 600 }}>Categorias</span>
+                  </div>
+                  <button
+                    type="button"
+                    style={{ background: '#27272a', border: 'none', color: '#e4e4e7', padding: '4px 10px', borderRadius: 12, cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
+                    onClick={() => setIsCategoryEditOpen(true)}
+                  >
+                    ⚙️ Editar Categorias
+                  </button>
+                </div>
+
+                <div className="dark-category-pills" style={{ width: '100%', marginTop: 4 }}>
+                  {categories.map((c) => (
                     <button
                       key={c.id}
                       type="button"
@@ -261,6 +286,13 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
         initialDate={customDate}
         onClose={() => setIsDatePickerOpen(false)}
         onSelectDate={handleCustomDateSelected}
+      />
+
+      {/* Modal de Edição de Categorias */}
+      <CategoryEditModal
+        isOpen={isCategoryEditOpen}
+        onClose={() => setIsCategoryEditOpen(false)}
+        onUpdated={refreshCategories}
       />
     </>
   )
