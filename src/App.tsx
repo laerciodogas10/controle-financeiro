@@ -120,13 +120,6 @@ export default function App() {
             <div className="balance-card">
               <div className="balance-header">
                 <span>Saldo</span>
-                <button
-                  className="eye-btn"
-                  onClick={() => setShowBalance(!showBalance)}
-                  title={showBalance ? "Ocultar valores" : "Mostrar valores"}
-                >
-                  {showBalance ? '👁️' : '🙈'}
-                </button>
               </div>
 
               <div className={`balance-amount ${!showBalance ? 'hidden-val' : ''}`}>
