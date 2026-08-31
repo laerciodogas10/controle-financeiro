@@ -8,9 +8,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Didi Gás - Finanças',
-        short_name: 'Finanças',
-        description: 'Controle de despesas e lucro do Didi Gás',
+        name: 'Controle Financeiro',
+        short_name: 'Controle Financeiro',
+        description: 'Controle de despesas e lucro',
         theme_color: '#0f766e',
         background_color: '#ffffff',
         display: 'standalone',

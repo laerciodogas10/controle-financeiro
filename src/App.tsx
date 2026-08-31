@@ -28,13 +28,22 @@ export default function App() {
     return unsubscribe
   }, [])
 
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
   const load = useCallback(async () => {
     setLoading(true)
-    const [profit, exps] = await Promise.all([getDailyProfit(), getTodayExpenses()])
-    setLucro(profit.lucro)
-    setFaturamento(profit.faturamento)
-    setExpenses(exps)
-    setLoading(false)
+    setErrorMsg(null)
+    try {
+      const [profit, exps] = await Promise.all([getDailyProfit(), getTodayExpenses()])
+      setLucro(profit.lucro)
+      setFaturamento(profit.faturamento)
+      setExpenses(exps)
+    } catch (err) {
+      console.error("Erro ao carregar dados:", err)
+      setErrorMsg("Ocorreu um erro ao carregar os dados do Firebase.")
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -50,7 +59,7 @@ export default function App() {
   return (
     <div className="app">
       <header>
-        <h1>Didi Gas - Financas</h1>
+        <h1>Controle Financeiro</h1>
         <p className="subtitle">
           {new Date().toLocaleDateString('pt-BR', {
             weekday: 'long',
@@ -62,6 +71,11 @@ export default function App() {
 
       {loading ? (
         <p>Carregando...</p>
+      ) : errorMsg ? (
+        <div style={{ padding: 16, background: '#fee2e2', color: '#991b1b', borderRadius: 8, margin: '16px 0' }}>
+          <p>{errorMsg}</p>
+          <button onClick={load} style={{ marginTop: 8, padding: '6px 12px', cursor: 'pointer' }}>Tentar novamente</button>
+        </div>
       ) : (
         <>
           <section className="summary-cards">

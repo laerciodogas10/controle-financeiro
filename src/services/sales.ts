@@ -20,26 +20,56 @@ function endOfDay(date: Date) {
  * o Didi Gás só calcule estatísticas "ao vivo" na tela dele.
  */
 export async function getDailyProfit(date: Date = new Date()) {
-  const q = query(
-    collection(db, SALES_COLLECTION),
-    where('createdAt', '>=', Timestamp.fromDate(startOfDay(date))),
-    where('createdAt', '<=', Timestamp.fromDate(endOfDay(date)))
-  )
+  try {
+    const start = startOfDay(date)
+    const end = endOfDay(date)
 
-  const snap = await getDocs(q)
+    let snap
+    try {
+      const q = query(
+        collection(db, SALES_COLLECTION),
+        where('createdAt', '>=', Timestamp.fromDate(start)),
+        where('createdAt', '<=', Timestamp.fromDate(end))
+      )
+      snap = await getDocs(q)
+    } catch (e) {
+      console.warn("Filtro Firestore falhou (pode requerer índice). Buscando todas as vendas para filtrar no cliente:", e)
+      snap = await getDocs(collection(db, SALES_COLLECTION))
+    }
 
-  let faturamento = 0
-  let lucro = 0
-  let qtdVendas = 0
+    let faturamento = 0
+    let lucro = 0
+    let qtdVendas = 0
 
-  snap.forEach((doc) => {
-    const sale = doc.data() as Sale
-    // Ignora vendas canceladas; conta ATIVO e LIQUIDADO (fiado pago)
-    if (sale.status === 'CANCELADO') return
-    faturamento += sale.total || 0
-    lucro += sale.lucro || 0
-    qtdVendas += 1
-  })
+    snap.forEach((doc) => {
+      const sale = doc.data() as any
+      if (sale.status === 'CANCELADO') return
 
-  return { faturamento, lucro, qtdVendas }
+      let saleDate: Date | null = null
+      if (sale.createdAt?.toDate) {
+        saleDate = sale.createdAt.toDate()
+      } else if (sale.createdAt?.seconds) {
+        saleDate = new Date(sale.createdAt.seconds * 1000)
+      } else if (sale.createdAt) {
+        saleDate = new Date(sale.createdAt)
+      } else if (sale.data?.toDate) {
+        saleDate = sale.data.toDate()
+      } else if (sale.data) {
+        saleDate = new Date(sale.data)
+      }
+
+      if (saleDate && (saleDate < start || saleDate > end)) {
+        return
+      }
+
+      faturamento += Number(sale.total || sale.faturamento || sale.valor || 0)
+      lucro += Number(sale.lucro || 0)
+      qtdVendas += 1
+    })
+
+    return { faturamento, lucro, qtdVendas }
+  } catch (err) {
+    console.error("Erro ao carregar lucro diário:", err)
+    return { faturamento: 0, lucro: 0, qtdVendas: 0 }
+  }
 }
