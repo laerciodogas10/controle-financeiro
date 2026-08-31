@@ -119,7 +119,7 @@ export default function App() {
             {/* Card Principal de Saldo */}
             <div className="balance-card">
               <div className="balance-header">
-                <span>Saldo atual em contas</span>
+                <span>Saldo</span>
                 <button
                   className="eye-btn"
                   onClick={() => setShowBalance(!showBalance)}
