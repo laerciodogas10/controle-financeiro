@@ -73,3 +73,14 @@ export async function getDailyProfit(date: Date = new Date()) {
     return { faturamento: 0, lucro: 0, qtdVendas: 0 }
   }
 }
+
+export async function addRevenue(valor: number, descricao: string) {
+  const { addDoc } = await import('firebase/firestore')
+  await addDoc(collection(db, SALES_COLLECTION), {
+    total: valor,
+    lucro: valor,
+    descricao: descricao || 'Receita registrada',
+    status: 'ATIVO',
+    createdAt: Timestamp.now(),
+  })
+}
