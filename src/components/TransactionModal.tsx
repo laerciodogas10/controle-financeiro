@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
 import { addExpense } from '../services/expenses'
-import { addRevenue } from '../services/sales'
+import { addRevenue } from '../services/revenues'
 import { DatePickerModal } from './DatePickerModal'
-import { CategoryEditModal } from './CategoryEditModal'
-import { getStoredCategories, CategoryItem } from '../services/categories'
+import { getStoredCategories, getStoredRevenueCategories, CategoryItem } from '../services/categories'
 import type { ExpenseCategory } from '../types'
 
 interface Props {
@@ -19,31 +18,40 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
   const [descricao, setDescricao] = useState('')
   
   // Categorias Dinâmicas
-  const [categories, setCategories] = useState<CategoryItem[]>(getStoredCategories())
+  const [expenseCategories, setExpenseCategories] = useState<CategoryItem[]>(getStoredCategories())
+  const [revenueCategories, setRevenueCategories] = useState<CategoryItem[]>(getStoredRevenueCategories())
   const [categoria, setCategoria] = useState<string>('')
-  const [isCategoryEditOpen, setIsCategoryEditOpen] = useState(false)
 
   const [dateMode, setDateMode] = useState<'hoje' | 'ontem' | 'outros'>('hoje')
   const [customDate, setCustomDate] = useState<Date>(new Date())
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+
+  const categories = type === 'despesa' ? expenseCategories : revenueCategories
 
   useEffect(() => {
     setType(defaultType)
-    const stored = getStoredCategories()
-    setCategories(stored)
-    if (stored.length > 0 && !categoria) {
-      setCategoria(stored[0].id)
+    const storedExp = getStoredCategories()
+    const storedRev = getStoredRevenueCategories()
+    setExpenseCategories(storedExp)
+    setRevenueCategories(storedRev)
+    
+    // Seleciona a primeira categoria do tipo padrão
+    if (defaultType === 'despesa' && storedExp.length > 0) {
+      setCategoria(storedExp[0].id)
+    } else if (defaultType === 'receita' && storedRev.length > 0) {
+      setCategoria(storedRev[0].id)
     }
   }, [defaultType, isOpen])
 
-  const refreshCategories = () => {
-    const updated = getStoredCategories()
-    setCategories(updated)
-    if (updated.length > 0) {
-      setCategoria(updated[0].id)
+  // Quando muda o tipo, atualiza a categoria selecionada
+  useEffect(() => {
+    const cats = type === 'despesa' ? expenseCategories : revenueCategories
+    if (cats.length > 0) {
+      setCategoria(cats[0].id)
     }
-  }
+  }, [type])
 
   if (!isOpen) return null
 
@@ -100,17 +108,17 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
   }
 
   const handleSubmit = async () => {
-    if (type === 'receita') {
-      onClose()
-      return
-    }
-
     const val = getNumericValue()
     if (val <= 0) return
 
     setSaving(true)
+    setSaveError('')
     try {
-      await addExpense((categoria || 'outros') as ExpenseCategory, val, descricao, 'app', customDate)
+      if (type === 'despesa') {
+        await addExpense((categoria || 'outros') as ExpenseCategory, val, descricao, 'app', customDate)
+      } else {
+        await addRevenue(categoria || 'outros_receita', val, descricao, customDate)
+      }
       // Limpa formulário
       setAmountStr('0')
       setDescricao('')
@@ -119,7 +127,8 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
       onAdded()
       onClose()
     } catch (err) {
-      console.error(err)
+      console.error('Erro ao salvar:', err)
+      setSaveError('Não foi possível salvar. Verifique as regras do Firestore e tente novamente.')
     } finally {
       setSaving(false)
     }
@@ -139,12 +148,13 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
 
             {/* Alternador de Tipo */}
             <div className="type-toggle-dropdown">
-              <span
+              <button
+                type="button"
                 className={`type-badge-btn ${isDespesa ? 'red' : 'green'}`}
-                style={{ opacity: isDespesa ? 1 : 0.7, cursor: 'default' }}
+                onClick={() => setType(isDespesa ? 'receita' : 'despesa')}
               >
-                {isDespesa ? 'Despesa' : 'Receita (somente leitura)'}
-              </span>
+                {isDespesa ? '↓ Despesa' : '↑ Receita'}
+              </button>
             </div>
           </div>
 
@@ -204,38 +214,29 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
               />
             </div>
 
-            {/* Categorias com Botão de Editar ⚙️ */}
-            {isDespesa && (
-              <div className="dark-input-row category-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span className="row-icon">🏷️</span>
-                    <span style={{ fontSize: 13, color: '#a1a1aa', fontWeight: 600 }}>Categorias</span>
-                  </div>
-                  <button
-                    type="button"
-                    style={{ background: '#27272a', border: 'none', color: '#e4e4e7', padding: '4px 10px', borderRadius: 12, cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
-                    onClick={() => setIsCategoryEditOpen(true)}
-                  >
-                    ⚙️ Editar Categorias
-                  </button>
-                </div>
-
-                <div className="dark-category-pills" style={{ width: '100%', marginTop: 4 }}>
-                  {categories.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      className={`dark-cat-pill ${categoria === c.id ? 'active' : ''}`}
-                      onClick={() => setCategoria(c.id)}
-                    >
-                      <span>{c.emoji}</span>
-                      <span>{c.label}</span>
-                    </button>
-                  ))}
-                </div>
+            {/* Categorias */}
+            <div className="dark-input-row category-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span className="row-icon">🏷️</span>
+                <span style={{ fontSize: 13, color: '#a1a1aa', fontWeight: 600 }}>
+                  {isDespesa ? 'Categoria da Despesa' : 'Categoria da Receita'}
+                </span>
               </div>
-            )}
+
+              <div className="dark-category-pills" style={{ width: '100%', marginTop: 4 }}>
+                {categories.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`dark-cat-pill ${categoria === c.id ? 'active' : ''}`}
+                    onClick={() => setCategoria(c.id)}
+                  >
+                    <span>{c.emoji}</span>
+                    <span>{c.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Teclado Numérico */}
@@ -265,6 +266,11 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
 
           {/* Ações Inferiores */}
           <div className="dark-modal-actions">
+            {saveError && (
+              <p style={{ color: '#f87171', fontSize: 12, margin: 0, textAlign: 'center' }}>
+                {saveError}
+              </p>
+            )}
             <button type="button" className="dark-btn-outline" onClick={onClose}>
               Cancelar
             </button>
@@ -286,13 +292,6 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
         initialDate={customDate}
         onClose={() => setIsDatePickerOpen(false)}
         onSelectDate={handleCustomDateSelected}
-      />
-
-      {/* Modal de Edição de Categorias */}
-      <CategoryEditModal
-        isOpen={isCategoryEditOpen}
-        onClose={() => setIsCategoryEditOpen(false)}
-        onUpdated={refreshCategories}
       />
     </>
   )

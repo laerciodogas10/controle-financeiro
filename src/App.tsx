@@ -4,29 +4,36 @@ import { auth } from './firebase'
 import { Login } from './components/Login'
 import { getDailyProfit } from './services/sales'
 import { getAllExpenses, deleteExpense } from './services/expenses'
+import { getAllRevenues, deleteRevenue } from './services/revenues'
 import { TransactionModal } from './components/TransactionModal'
 import { SettingsModal } from './components/SettingsModal'
-import { getStoredCategories } from './services/categories'
-import type { Expense } from './types'
+import { getStoredCategories, getStoredRevenueCategories } from './services/categories'
+import type { Expense, Revenue, TransactionItem } from './types'
 
 function formatBRL(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-function getCategoryMeta(catId: string) {
-  const categories = getStoredCategories()
+function getCategoryMeta(catId: string, tipo: 'despesa' | 'receita') {
+  const categories = tipo === 'despesa' ? getStoredCategories() : getStoredRevenueCategories()
   const found = categories.find((c) => c.id === catId || c.id === catId?.toLowerCase())
   if (found) return found
-  return { id: catId, label: catId, emoji: '📦' }
+  // Fallback especial para venda_gas (auto)
+  if (catId === 'venda_gas') return { id: 'venda_gas', label: 'Venda de Gás', emoji: '🔥' }
+  return { id: catId, label: catId, emoji: tipo === 'receita' ? '💰' : '📦' }
+}
+
+function getDateMs(dateObj: any): number {
+  if (dateObj?.toDate) return dateObj.toDate().getTime()
+  if (dateObj?.seconds) return dateObj.seconds * 1000
+  if (dateObj) return new Date(dateObj).getTime()
+  return 0
 }
 
 function formatDate(dateObj: any) {
-  let d: Date | null = null
-  if (dateObj?.toDate) d = dateObj.toDate()
-  else if (dateObj?.seconds) d = new Date(dateObj.seconds * 1000)
-  else if (dateObj) d = new Date(dateObj)
-
-  if (!d) return ''
+  const ms = getDateMs(dateObj)
+  if (!ms) return ''
+  const d = new Date(ms)
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
@@ -35,8 +42,9 @@ export default function App() {
   const [checkingAuth, setCheckingAuth] = useState(true)
 
   const [lucro, setLucro] = useState(0)
-  const [faturamento, setFaturamento] = useState(0)
-  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [transactions, setTransactions] = useState<TransactionItem[]>([])
+  const [totalReceitas, setTotalReceitas] = useState(0)
+  const [totalDespesas, setTotalDespesas] = useState(0)
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
@@ -65,10 +73,67 @@ export default function App() {
     setLoading(true)
     setErrorMsg(null)
     try {
-      const [profit, exps] = await Promise.all([getDailyProfit(), getAllExpenses()])
+      const [profit, exps, revs] = await Promise.all([
+        getDailyProfit(),
+        getAllExpenses(),
+        getAllRevenues(),
+      ])
+
       setLucro(profit.lucro)
-      setFaturamento(profit.faturamento)
-      setExpenses(exps)
+
+      // Monta lista unificada de transações
+      const items: TransactionItem[] = []
+
+      // 1. Entrada automática: Lucro do Didi Gás (Venda de Gás)
+      if (profit.lucro > 0) {
+        items.push({
+          id: 'auto_venda_gas',
+          tipo: 'receita',
+          categoria: 'venda_gas',
+          valor: profit.lucro,
+          descricao: `Lucro do dia (${profit.qtdVendas} vendas)`,
+          createdAt: new Date(),
+        })
+      }
+
+      // 2. Receitas manuais
+      revs.forEach((r) => {
+        items.push({
+          id: r.id || 'rev_' + Math.random(),
+          tipo: 'receita',
+          categoria: r.categoria,
+          valor: r.valor,
+          descricao: r.descricao,
+          createdAt: r.createdAt,
+        })
+      })
+
+      // 3. Despesas
+      exps.forEach((e) => {
+        items.push({
+          id: e.id || 'exp_' + Math.random(),
+          tipo: 'despesa',
+          categoria: e.categoria,
+          valor: e.valor,
+          descricao: e.descricao,
+          createdAt: e.createdAt,
+        })
+      })
+
+      // Ordena por data (mais recente primeiro), mantendo auto_venda_gas no topo
+      items.sort((a, b) => {
+        if (a.id === 'auto_venda_gas') return -1
+        if (b.id === 'auto_venda_gas') return 1
+        return getDateMs(b.createdAt) - getDateMs(a.createdAt)
+      })
+
+      setTransactions(items)
+
+      // Calcula totais
+      const totRec = profit.lucro + revs.reduce((s, r) => s + r.valor, 0)
+      const totDesp = exps.reduce((s, e) => s + e.valor, 0)
+      setTotalReceitas(totRec)
+      setTotalDespesas(totDesp)
     } catch (err) {
       console.error("Erro ao carregar dados:", err)
       setErrorMsg("Ocorreu um erro ao carregar os dados do Firebase.")
@@ -81,10 +146,14 @@ export default function App() {
     if (user) load()
   }, [user, load])
 
-  const handleDeleteExpense = async (id?: string) => {
-    if (!id) return
+  const handleDeleteTransaction = async (item: TransactionItem) => {
+    if (item.id === 'auto_venda_gas') return // Não pode deletar entrada automática
     try {
-      await deleteExpense(id)
+      if (item.tipo === 'despesa') {
+        await deleteExpense(item.id)
+      } else {
+        await deleteRevenue(item.id)
+      }
       load()
     } catch (err) {
       console.error(err)
@@ -99,9 +168,7 @@ export default function App() {
   if (checkingAuth) return null
   if (!user) return <Login />
 
-  const totalDespesas = expenses.reduce((sum, e) => sum + e.valor, 0)
-  const receitas = lucro
-  const saldoAtual = saldoAjuste + receitas - totalDespesas
+  const saldoAtual = saldoAjuste + totalReceitas - totalDespesas
 
   const currentMonthName = new Date().toLocaleDateString('pt-BR', { month: 'long' })
   const capitalizedMonth = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1)
@@ -173,7 +240,7 @@ export default function App() {
                   <div className="pill-details">
                     <span className="pill-label">Receitas</span>
                     <span className="pill-value green">
-                      {showBalance ? formatBRL(receitas) : '•••••'}
+                      {showBalance ? formatBRL(totalReceitas) : '•••••'}
                     </span>
                   </div>
                 </div>
@@ -190,17 +257,11 @@ export default function App() {
               </div>
             </div>
 
-            {/* Botões de Ação embaixo */}
+            {/* Botões de Ação */}
             <div className="action-buttons-group">
-              <button
-                className="action-btn btn-revenue"
-                onClick={() => openModal('receita')}
-                title="Receitas do outro app: modo somente leitura"
-                disabled
-                style={{ opacity: 0.55, cursor: 'not-allowed' }}
-              >
+              <button className="action-btn btn-revenue" onClick={() => openModal('receita')}>
                 <span className="btn-icon-circle">+</span>
-                Receitas do outro app
+                Registrar Receita
               </button>
 
               <button className="action-btn btn-expense" onClick={() => openModal('despesa')}>
@@ -209,37 +270,45 @@ export default function App() {
               </button>
             </div>
 
-            {/* Extrato / Histórico de Movimentações */}
+            {/* Histórico Unificado */}
             <section>
               <div className="section-title">
-                <h2>Histórico de Despesas</h2>
-                <span className="badge-count">{expenses.length} lançamentos</span>
+                <h2>Histórico</h2>
+                <span className="badge-count">{transactions.length} lançamentos</span>
               </div>
 
-              {expenses.length === 0 ? (
+              {transactions.length === 0 ? (
                 <div className="empty-state">
-                  <p>Nenhuma despesa registrada ainda.</p>
+                  <p>Nenhum lançamento registrado ainda.</p>
                   <span style={{ fontSize: 12, color: '#71717a', display: 'block', marginTop: 4 }}>
                     Use os botões acima para registrar.
                   </span>
                 </div>
               ) : (
                 <div className="transactions-list">
-                  {expenses.map((e) => {
-                    const catMeta = getCategoryMeta(e.categoria)
-                    const formattedDateStr = formatDate(e.createdAt)
+                  {transactions.map((t) => {
+                    const isReceita = t.tipo === 'receita'
+                    const catMeta = getCategoryMeta(t.categoria, t.tipo)
+                    const formattedDateStr = formatDate(t.createdAt)
+                    const isAuto = t.id === 'auto_venda_gas'
+
                     return (
-                      <div key={e.id} className="transaction-card">
+                      <div key={t.id} className="transaction-card">
                         <div className="tx-info">
-                          <div className="tx-icon expense">
+                          <div className={`tx-icon ${isReceita ? 'revenue' : 'expense'}`}>
                             {catMeta.emoji}
                           </div>
                           <div>
                             <div className="tx-title" style={{ textTransform: 'capitalize' }}>
                               {catMeta.label}
+                              {isAuto && (
+                                <span style={{ fontSize: 10, color: '#a1a1aa', marginLeft: 6, fontWeight: 400 }}>
+                                  (auto)
+                                </span>
+                              )}
                             </div>
-                            {e.descricao && (
-                              <div className="tx-sub">{e.descricao}</div>
+                            {t.descricao && (
+                              <div className="tx-sub">{t.descricao}</div>
                             )}
                             {formattedDateStr && (
                               <div className="tx-sub" style={{ fontSize: 11, color: '#71717a' }}>{formattedDateStr}</div>
@@ -248,17 +317,19 @@ export default function App() {
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div className="tx-amount expense">
-                            - {showBalance ? formatBRL(e.valor) : '•••••'}
+                          <div className={`tx-amount ${isReceita ? 'revenue' : 'expense'}`}>
+                            {isReceita ? '+ ' : '- '}{showBalance ? formatBRL(t.valor) : '•••••'}
                           </div>
-                          <button
-                            type="button"
-                            style={{ background: 'none', border: 'none', color: '#71717a', fontSize: 14, cursor: 'pointer', padding: 4 }}
-                            title="Excluir lançamento"
-                            onClick={() => handleDeleteExpense(e.id)}
-                          >
-                            🗑️
-                          </button>
+                          {!isAuto && (
+                            <button
+                              type="button"
+                              style={{ background: 'none', border: 'none', color: '#71717a', fontSize: 14, cursor: 'pointer', padding: 4 }}
+                              title="Excluir lançamento"
+                              onClick={() => handleDeleteTransaction(t)}
+                            >
+                              🗑️
+                            </button>
+                          )}
                         </div>
                       </div>
                     )
@@ -281,7 +352,7 @@ export default function App() {
       {/* Modal Unificado de Definições (Saldo & Categorias) */}
       <SettingsModal
         isOpen={isSettingsOpen}
-        currentNetBalance={receitas - totalDespesas}
+        currentNetBalance={totalReceitas - totalDespesas}
         onClose={() => setIsSettingsOpen(false)}
         onBalanceUpdated={(newAjuste) => {
           setSaldoAjuste(newAjuste)

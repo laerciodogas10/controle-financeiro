@@ -15,9 +15,8 @@ function endOfDay(date: Date) {
 }
 
 /**
- * Lê as vendas do dia direto do Firestore e soma o lucro.
- * Não depende de nenhum resumo pré-calculado — funciona mesmo que
- * o Didi Gás só calcule estatísticas "ao vivo" na tela dele.
+ * Lê as vendas do dia direto do Firestore (coleção do Didi Gás) e soma o lucro.
+ * Retorna o lucro do dia para exibir como entrada automática "Venda de Gás".
  */
 export async function getDailyProfit(date: Date = new Date()) {
   try {
@@ -72,11 +71,4 @@ export async function getDailyProfit(date: Date = new Date()) {
     console.error("Erro ao carregar lucro diário:", err)
     return { faturamento: 0, lucro: 0, qtdVendas: 0 }
   }
-}
-
-export async function addRevenue(valor: number, descricao: string, customDate?: Date) {
-  // O app de finanças deve apenas ler o faturamento/lucratividade do outro app.
-  // Nenhuma gravação é permitida na coleção de vendas do projeto externo.
-  console.warn('Registro de receita desativado: o app está em modo somente leitura para vendas.')
-  return
 }
