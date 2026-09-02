@@ -100,7 +100,7 @@ export default function App() {
   if (!user) return <Login />
 
   const totalDespesas = expenses.reduce((sum, e) => sum + e.valor, 0)
-  const receitas = faturamento > 0 ? faturamento : lucro
+  const receitas = lucro
   const saldoAtual = saldoAjuste + receitas - totalDespesas
 
   const currentMonthName = new Date().toLocaleDateString('pt-BR', { month: 'long' })
@@ -192,9 +192,15 @@ export default function App() {
 
             {/* Botões de Ação embaixo */}
             <div className="action-buttons-group">
-              <button className="action-btn btn-revenue" onClick={() => openModal('receita')}>
+              <button
+                className="action-btn btn-revenue"
+                onClick={() => openModal('receita')}
+                title="Receitas do outro app: modo somente leitura"
+                disabled
+                style={{ opacity: 0.55, cursor: 'not-allowed' }}
+              >
                 <span className="btn-icon-circle">+</span>
-                Registrar Receita
+                Receitas do outro app
               </button>
 
               <button className="action-btn btn-expense" onClick={() => openModal('despesa')}>

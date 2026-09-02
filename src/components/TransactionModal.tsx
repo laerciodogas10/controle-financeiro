@@ -100,16 +100,17 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
   }
 
   const handleSubmit = async () => {
+    if (type === 'receita') {
+      onClose()
+      return
+    }
+
     const val = getNumericValue()
     if (val <= 0) return
 
     setSaving(true)
     try {
-      if (type === 'despesa') {
-        await addExpense((categoria || 'outros') as ExpenseCategory, val, descricao, 'app', customDate)
-      } else {
-        await addRevenue(val, descricao, customDate)
-      }
+      await addExpense((categoria || 'outros') as ExpenseCategory, val, descricao, 'app', customDate)
       // Limpa formulário
       setAmountStr('0')
       setDescricao('')
@@ -138,13 +139,12 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
 
             {/* Alternador de Tipo */}
             <div className="type-toggle-dropdown">
-              <button
-                type="button"
+              <span
                 className={`type-badge-btn ${isDespesa ? 'red' : 'green'}`}
-                onClick={() => setType(isDespesa ? 'receita' : 'despesa')}
+                style={{ opacity: isDespesa ? 1 : 0.7, cursor: 'default' }}
               >
-                {isDespesa ? 'Despesa' : 'Receita'} ▾
-              </button>
+                {isDespesa ? 'Despesa' : 'Receita (somente leitura)'}
+              </span>
             </div>
           </div>
 

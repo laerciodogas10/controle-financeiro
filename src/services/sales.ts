@@ -75,12 +75,8 @@ export async function getDailyProfit(date: Date = new Date()) {
 }
 
 export async function addRevenue(valor: number, descricao: string, customDate?: Date) {
-  const { addDoc } = await import('firebase/firestore')
-  await addDoc(collection(db, SALES_COLLECTION), {
-    total: valor,
-    lucro: valor,
-    descricao: descricao || 'Receita registrada',
-    status: 'ATIVO',
-    createdAt: customDate ? Timestamp.fromDate(customDate) : Timestamp.now(),
-  })
+  // O app de finanças deve apenas ler o faturamento/lucratividade do outro app.
+  // Nenhuma gravação é permitida na coleção de vendas do projeto externo.
+  console.warn('Registro de receita desativado: o app está em modo somente leitura para vendas.')
+  return
 }
