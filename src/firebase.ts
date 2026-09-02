@@ -22,3 +22,6 @@ export const SALES_COLLECTION = import.meta.env.VITE_SALES_COLLECTION || 'vendas
 
 // Nome da coleção nova de despesas (criada por este app)
 export const EXPENSES_COLLECTION = 'despesas'
+
+// Nome da coleção de receitas manuais (criada por este app)
+export const REVENUES_COLLECTION = 'receitas'

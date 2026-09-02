@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { addRevenue } from '../services/sales'
+import { addRevenue } from '../services/revenues'
 
 interface Props {
   isOpen: boolean
@@ -21,7 +21,7 @@ export function RevenueModal({ isOpen, onClose, onAdded }: Props) {
     try {
       const numVal = parseFloat(valor.replace(/\./g, '').replace(',', '.'))
       if (!isNaN(numVal) && numVal > 0) {
-        await addRevenue(numVal, descricao)
+        await addRevenue('outros_receita', numVal, descricao)
         setValor('')
         setDescricao('')
         onAdded()
