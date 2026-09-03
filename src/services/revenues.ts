@@ -23,7 +23,7 @@ export async function syncDailyRevenue(lucro: number, quantidadeVendas: number, 
   await setDoc(doc(db, REVENUES_COLLECTION, `auto_venda_gas_${key}`), {
     categoria: 'venda_gas',
     valor: lucro,
-    descricao: `Lucro do dia (${quantidadeVendas} vendas)`,
+    descricao: `Didi Gás - Lucro do dia (${quantidadeVendas} vendas)`,
     origem: 'auto',
     createdAt: Timestamp.fromDate(date),
   })
