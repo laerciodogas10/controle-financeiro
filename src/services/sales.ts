@@ -1,5 +1,5 @@
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore'
-import { db, SALES_COLLECTION } from '../firebase'
+import { didiGasDb, SALES_COLLECTION } from '../firebase'
 import type { Sale } from '../types'
 
 function startOfDay(date: Date) {
@@ -26,14 +26,14 @@ export async function getDailyProfit(date: Date = new Date()) {
     let snap
     try {
       const q = query(
-        collection(db, SALES_COLLECTION),
+        collection(didiGasDb, SALES_COLLECTION),
         where('createdAt', '>=', Timestamp.fromDate(start)),
         where('createdAt', '<=', Timestamp.fromDate(end))
       )
       snap = await getDocs(q)
     } catch (e) {
       console.warn("Filtro Firestore falhou (pode requerer índice). Buscando todas as vendas para filtrar no cliente:", e)
-      snap = await getDocs(collection(db, SALES_COLLECTION))
+      snap = await getDocs(collection(didiGasDb, SALES_COLLECTION))
     }
 
     let faturamento = 0

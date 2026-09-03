@@ -17,6 +17,18 @@ export const app = initializeApp(firebaseConfig)
 export const db = getFirestore(app)
 export const auth = getAuth(app)
 
+const didiGasConfig = {
+  apiKey: import.meta.env.VITE_DIDI_GAS_API_KEY,
+  authDomain: import.meta.env.VITE_DIDI_GAS_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_DIDI_GAS_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_DIDI_GAS_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_DIDI_GAS_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_DIDI_GAS_APP_ID,
+}
+
+export const didiGasApp = initializeApp(didiGasConfig, 'didi-gas')
+export const didiGasDb = getFirestore(didiGasApp)
+
 // Nome da coleção de vendas do Didi Gás — troque aqui se não for "vendas"
 export const SALES_COLLECTION = import.meta.env.VITE_SALES_COLLECTION || 'vendas'
 
