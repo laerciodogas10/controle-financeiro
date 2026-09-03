@@ -4,7 +4,7 @@ import { auth } from './firebase'
 import { Login } from './components/Login'
 import { getDailyProfit } from './services/sales'
 import { getAllExpenses, deleteExpense } from './services/expenses'
-import { getAllRevenues, deleteRevenue } from './services/revenues'
+import { getAllRevenues, deleteRevenue, syncDailyRevenue } from './services/revenues'
 import { TransactionModal } from './components/TransactionModal'
 import { SettingsModal } from './components/SettingsModal'
 import { getStoredCategories, getStoredRevenueCategories } from './services/categories'
@@ -73,30 +73,16 @@ export default function App() {
     setLoading(true)
     setErrorMsg(null)
     try {
-      const [profit, exps, revs] = await Promise.all([
-        getDailyProfit(),
-        getAllExpenses(),
-        getAllRevenues(),
-      ])
+      const profit = await getDailyProfit()
+      await syncDailyRevenue(profit.lucro, profit.qtdVendas)
+      const [exps, revs] = await Promise.all([getAllExpenses(), getAllRevenues()])
 
       setLucro(profit.lucro)
 
       // Monta lista unificada de transações
       const items: TransactionItem[] = []
 
-      // 1. Entrada automática: Lucro do Didi Gás (Venda de Gás)
-      if (profit.lucro > 0) {
-        items.push({
-          id: 'auto_venda_gas',
-          tipo: 'receita',
-          categoria: 'venda_gas',
-          valor: profit.lucro,
-          descricao: `Lucro do dia (${profit.qtdVendas} vendas)`,
-          createdAt: new Date(),
-        })
-      }
-
-      // 2. Receitas manuais
+      // Receitas automáticas e manuais ficam na coleção local "receitas".
       revs.forEach((r) => {
         items.push({
           id: r.id || 'rev_' + Math.random(),
@@ -108,7 +94,7 @@ export default function App() {
         })
       })
 
-      // 3. Despesas
+      // Despesas ficam na coleção local "despesas".
       exps.forEach((e) => {
         items.push({
           id: e.id || 'exp_' + Math.random(),
@@ -120,17 +106,15 @@ export default function App() {
         })
       })
 
-      // Ordena por data (mais recente primeiro), mantendo auto_venda_gas no topo
+      // Ordena por data (mais recente primeiro).
       items.sort((a, b) => {
-        if (a.id === 'auto_venda_gas') return -1
-        if (b.id === 'auto_venda_gas') return 1
         return getDateMs(b.createdAt) - getDateMs(a.createdAt)
       })
 
       setTransactions(items)
 
       // Calcula totais
-      const totRec = profit.lucro + revs.reduce((s, r) => s + r.valor, 0)
+      const totRec = revs.reduce((s, r) => s + r.valor, 0)
       const totDesp = exps.reduce((s, e) => s + e.valor, 0)
       setTotalReceitas(totRec)
       setTotalDespesas(totDesp)
@@ -147,7 +131,7 @@ export default function App() {
   }, [user, load])
 
   const handleDeleteTransaction = async (item: TransactionItem) => {
-    if (item.id === 'auto_venda_gas') return // Não pode deletar entrada automática
+    if (item.id.startsWith('auto_venda_gas_')) return // Não pode deletar entrada automática
     try {
       if (item.tipo === 'despesa') {
         await deleteExpense(item.id)

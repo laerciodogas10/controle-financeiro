@@ -2,10 +2,32 @@ import {
   collection,
   addDoc,
   getDocs,
+  doc,
+  setDoc,
   Timestamp,
 } from 'firebase/firestore'
 import { db, REVENUES_COLLECTION } from '../firebase'
 import type { Revenue } from '../types'
+
+function dateKey(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export async function syncDailyRevenue(lucro: number, quantidadeVendas: number, date = new Date()) {
+  if (lucro <= 0 || quantidadeVendas <= 0) return
+
+  const key = dateKey(date)
+  await setDoc(doc(db, REVENUES_COLLECTION, `auto_venda_gas_${key}`), {
+    categoria: 'venda_gas',
+    valor: lucro,
+    descricao: `Lucro do dia (${quantidadeVendas} vendas)`,
+    origem: 'auto',
+    createdAt: Timestamp.fromDate(date),
+  })
+}
 
 export async function addRevenue(
   categoria: string,
