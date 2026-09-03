@@ -37,6 +37,16 @@ function formatDate(dateObj: any) {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
+function isToday(dateObj: any) {
+  const ms = getDateMs(dateObj)
+  if (!ms) return false
+  const date = new Date(ms)
+  const today = new Date()
+  return date.getFullYear() === today.getFullYear()
+    && date.getMonth() === today.getMonth()
+    && date.getDate() === today.getDate()
+}
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null)
   const [checkingAuth, setCheckingAuth] = useState(true)
@@ -114,7 +124,10 @@ export default function App() {
       setTransactions(items)
 
       // Calcula totais
-      const totRec = revs.reduce((s, r) => s + r.valor, 0)
+      const totRec = revs.reduce((sum, revenue) => {
+        const isAutomatic = revenue.id?.startsWith('auto_venda_gas_')
+        return sum + (!isAutomatic || isToday(revenue.createdAt) ? revenue.valor : 0)
+      }, 0)
       const totDesp = exps.reduce((s, e) => s + e.valor, 0)
       setTotalReceitas(totRec)
       setTotalDespesas(totDesp)
