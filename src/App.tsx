@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
 import { auth } from './firebase'
 import { Login } from './components/Login'
-import { getDailyProfit } from './services/sales'
+import { subscribeDailyProfit } from './services/sales'
 import { getAllExpenses, deleteExpense } from './services/expenses'
 import { getAllRevenues, deleteRevenue, syncDailyRevenue } from './services/revenues'
 import { TransactionModal } from './components/TransactionModal'
@@ -83,11 +83,7 @@ export default function App() {
     setLoading(true)
     setErrorMsg(null)
     try {
-      const profit = await getDailyProfit()
-      await syncDailyRevenue(profit.lucro, profit.qtdVendas)
       const [exps, revs] = await Promise.all([getAllExpenses(), getAllRevenues()])
-
-      setLucro(profit.lucro)
 
       // Monta lista unificada de transações
       const items: TransactionItem[] = []
@@ -141,6 +137,19 @@ export default function App() {
 
   useEffect(() => {
     if (user) load()
+  }, [user, load])
+
+  // Escuta o lucro do dia do Didi Gás em tempo real.
+  // Toda vez que houver uma venda nova, cancelada, etc., recalcula e
+  // sincroniza a receita automática "Venda de Gás" sozinho.
+  useEffect(() => {
+    if (!user) return
+    const unsubscribe = subscribeDailyProfit(async (profit) => {
+      setLucro(profit.lucro)
+      await syncDailyRevenue(profit.lucro, profit.qtdVendas)
+      load()
+    })
+    return () => unsubscribe()
   }, [user, load])
 
   const handleDeleteTransaction = async (item: TransactionItem) => {
