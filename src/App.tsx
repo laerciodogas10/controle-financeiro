@@ -37,6 +37,22 @@ function formatDate(dateObj: any) {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
+function isSameDay(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate()
+}
+
+function getDayLabel(date: Date) {
+  const today = new Date()
+  const yesterday = new Date()
+  yesterday.setDate(today.getDate() - 1)
+
+  if (isSameDay(date, today)) return 'Hoje'
+  if (isSameDay(date, yesterday)) return 'Ontem'
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null)
   const [checkingAuth, setCheckingAuth] = useState(true)
@@ -47,6 +63,9 @@ export default function App() {
   const [totalDespesas, setTotalDespesas] = useState(0)
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  // Dia selecionado para o resumo diário (com navegação < / >)
+  const [selectedDay, setSelectedDay] = useState(() => new Date())
 
   // Saldo Ajuste (Local Storage)
   const [saldoAjuste, setSaldoAjuste] = useState(() => {
@@ -75,10 +94,8 @@ export default function App() {
     try {
       const [exps, revs] = await Promise.all([getAllExpenses(), getAllRevenues()])
 
-      // Monta lista unificada de transações
       const items: TransactionItem[] = []
 
-      // Receitas automáticas e manuais ficam na coleção local "receitas".
       revs.forEach((r) => {
         items.push({
           id: r.id || 'rev_' + Math.random(),
@@ -90,7 +107,6 @@ export default function App() {
         })
       })
 
-      // Despesas ficam na coleção local "despesas".
       exps.forEach((e) => {
         items.push({
           id: e.id || 'exp_' + Math.random(),
@@ -102,16 +118,12 @@ export default function App() {
         })
       })
 
-      // Ordena por data (mais recente primeiro).
       items.sort((a, b) => {
         return getDateMs(b.createdAt) - getDateMs(a.createdAt)
       })
 
       setTransactions(items)
 
-      // Calcula totais: soma TODAS as receitas e despesas, de qualquer dia
-      // (antes, receitas automáticas de dias passados eram ignoradas aqui,
-      // o que fazia o total de Receitas não bater com o histórico exibido).
       const totRec = revs.reduce((sum, revenue) => sum + (revenue.valor || 0), 0)
       const totDesp = exps.reduce((s, e) => s + e.valor, 0)
       setTotalReceitas(totRec)
@@ -128,9 +140,6 @@ export default function App() {
     if (user) load()
   }, [user, load])
 
-  // Escuta o lucro do dia do Didi Gás em tempo real.
-  // Toda vez que houver uma venda nova, cancelada, etc., recalcula e
-  // sincroniza a receita automática "Venda de Gás" sozinho.
   useEffect(() => {
     if (!user) return
     const unsubscribe = subscribeDailyProfit(async (profit) => {
@@ -142,11 +151,6 @@ export default function App() {
   }, [user, load])
 
   const handleDeleteTransaction = async (item: TransactionItem) => {
-    // Agora qualquer lançamento pode ser apagado, inclusive as entradas
-    // automáticas de "Venda de Gás" de dias anteriores ou com valor errado.
-    // Atenção: se apagar a entrada automática de HOJE, ela pode ser recriada
-    // sozinha na próxima venda registrada no Didi Gás (o listener em tempo
-    // real chama syncDailyRevenue de novo).
     try {
       if (item.tipo === 'despesa') {
         await deleteExpense(item.id)
@@ -164,6 +168,22 @@ export default function App() {
     setIsModalOpen(true)
   }
 
+  const goToPreviousDay = () => {
+    setSelectedDay((prev) => {
+      const d = new Date(prev)
+      d.setDate(d.getDate() - 1)
+      return d
+    })
+  }
+
+  const goToNextDay = () => {
+    setSelectedDay((prev) => {
+      const d = new Date(prev)
+      d.setDate(d.getDate() + 1)
+      return d
+    })
+  }
+
   if (checkingAuth) return null
   if (!user) return <Login />
 
@@ -172,9 +192,18 @@ export default function App() {
   const currentMonthName = new Date().toLocaleDateString('pt-BR', { month: 'long' })
   const capitalizedMonth = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1)
 
+  const receitaDoDia = transactions
+    .filter((t) => t.tipo === 'receita' && isSameDay(new Date(getDateMs(t.createdAt)), selectedDay))
+    .reduce((sum, t) => sum + t.valor, 0)
+
+  const despesaDoDia = transactions
+    .filter((t) => t.tipo === 'despesa' && isSameDay(new Date(getDateMs(t.createdAt)), selectedDay))
+    .reduce((sum, t) => sum + t.valor, 0)
+
+  const isFutureDay = new Date(selectedDay).setHours(0, 0, 0, 0) > new Date().setHours(0, 0, 0, 0)
+
   return (
     <div className="app-container">
-      {/* Header Superior */}
       <header className="top-bar">
         <div className="user-profile">
           <div className="avatar">
@@ -207,7 +236,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* Conteúdo Principal */}
       <main className="main-content">
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#a1a1aa' }}>
@@ -222,7 +250,6 @@ export default function App() {
           </div>
         ) : (
           <>
-            {/* Card Principal de Saldo */}
             <div className="balance-card">
               <div className="balance-header">
                 <span>Saldo</span>
@@ -232,7 +259,6 @@ export default function App() {
                 {showBalance ? formatBRL(saldoAtual) : '••••••••'}
               </div>
 
-              {/* Indicadores Receitas & Despesas */}
               <div className="income-expense-row">
                 <div className="indicator-pill">
                   <div className="pill-icon green">↑</div>
@@ -254,9 +280,54 @@ export default function App() {
                   </div>
                 </div>
               </div>
+
+              {/* Resumo do dia selecionado, com navegação < Dia > */}
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 10 }}>
+                  <button
+                    type="button"
+                    onClick={goToPreviousDay}
+                    aria-label="Dia anterior"
+                    style={{ background: 'none', border: 'none', color: '#a1a1aa', fontSize: 18, cursor: 'pointer', padding: 4 }}
+                  >
+                    ‹
+                  </button>
+                  <span style={{ fontWeight: 700, fontSize: 14 }}>{getDayLabel(selectedDay)}</span>
+                  <button
+                    type="button"
+                    onClick={goToNextDay}
+                    disabled={isFutureDay}
+                    aria-label="Próximo dia"
+                    style={{ background: 'none', border: 'none', color: isFutureDay ? '#3f3f46' : '#a1a1aa', fontSize: 18, cursor: isFutureDay ? 'default' : 'pointer', padding: 4 }}
+                  >
+                    ›
+                  </button>
+                </div>
+
+                <div className="income-expense-row" style={{ gap: 8 }}>
+                  <div className="indicator-pill" style={{ padding: '8px 10px', gap: 8 }}>
+                    <div className="pill-icon green" style={{ width: 22, height: 22, fontSize: 11 }}>↑</div>
+                    <div className="pill-details">
+                      <span className="pill-label" style={{ fontSize: 11 }}>Receita do dia</span>
+                      <span className="pill-value green" style={{ fontSize: 13 }}>
+                        {showBalance ? formatBRL(receitaDoDia) : '•••••'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="indicator-pill" style={{ padding: '8px 10px', gap: 8 }}>
+                    <div className="pill-icon red" style={{ width: 22, height: 22, fontSize: 11 }}>↓</div>
+                    <div className="pill-details">
+                      <span className="pill-label" style={{ fontSize: 11 }}>Despesa do dia</span>
+                      <span className="pill-value red" style={{ fontSize: 13 }}>
+                        {showBalance ? formatBRL(despesaDoDia) : '•••••'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Botões de Ação */}
             <div className="action-buttons-group">
               <button className="action-btn btn-revenue" onClick={() => openModal('receita')}>
                 <span className="btn-icon-circle">+</span>
@@ -269,7 +340,6 @@ export default function App() {
               </button>
             </div>
 
-            {/* Histórico Unificado */}
             <section>
               <div className="section-title">
                 <h2>Histórico</h2>
@@ -338,7 +408,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Modal de Transação */}
       <TransactionModal
         isOpen={isModalOpen}
         defaultType={modalType}
@@ -346,7 +415,6 @@ export default function App() {
         onAdded={load}
       />
 
-      {/* Modal Unificado de Definições (Saldo & Categorias) */}
       <SettingsModal
         isOpen={isSettingsOpen}
         currentNetBalance={totalReceitas - totalDespesas}
