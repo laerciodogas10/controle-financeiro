@@ -37,16 +37,6 @@ function formatDate(dateObj: any) {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
-function isToday(dateObj: any) {
-  const ms = getDateMs(dateObj)
-  if (!ms) return false
-  const date = new Date(ms)
-  const today = new Date()
-  return date.getFullYear() === today.getFullYear()
-    && date.getMonth() === today.getMonth()
-    && date.getDate() === today.getDate()
-}
-
 export default function App() {
   const [user, setUser] = useState<User | null>(null)
   const [checkingAuth, setCheckingAuth] = useState(true)
@@ -119,11 +109,10 @@ export default function App() {
 
       setTransactions(items)
 
-      // Calcula totais
-      const totRec = revs.reduce((sum, revenue) => {
-        const isAutomatic = revenue.id?.startsWith('auto_venda_gas_')
-        return sum + (!isAutomatic || isToday(revenue.createdAt) ? revenue.valor : 0)
-      }, 0)
+      // Calcula totais: soma TODAS as receitas e despesas, de qualquer dia
+      // (antes, receitas automáticas de dias passados eram ignoradas aqui,
+      // o que fazia o total de Receitas não bater com o histórico exibido).
+      const totRec = revs.reduce((sum, revenue) => sum + (revenue.valor || 0), 0)
       const totDesp = exps.reduce((s, e) => s + e.valor, 0)
       setTotalReceitas(totRec)
       setTotalDespesas(totDesp)
@@ -153,7 +142,11 @@ export default function App() {
   }, [user, load])
 
   const handleDeleteTransaction = async (item: TransactionItem) => {
-    if (item.id.startsWith('auto_venda_gas_')) return // Não pode deletar entrada automática
+    // Agora qualquer lançamento pode ser apagado, inclusive as entradas
+    // automáticas de "Venda de Gás" de dias anteriores ou com valor errado.
+    // Atenção: se apagar a entrada automática de HOJE, ela pode ser recriada
+    // sozinha na próxima venda registrada no Didi Gás (o listener em tempo
+    // real chama syncDailyRevenue de novo).
     try {
       if (item.tipo === 'despesa') {
         await deleteExpense(item.id)
@@ -296,7 +289,7 @@ export default function App() {
                     const isReceita = t.tipo === 'receita'
                     const catMeta = getCategoryMeta(t.categoria, t.tipo)
                     const formattedDateStr = formatDate(t.createdAt)
-                    const isAuto = t.id === 'auto_venda_gas'
+                    const isAuto = t.id?.startsWith('auto_venda_gas_')
 
                     return (
                       <div key={t.id} className="transaction-card">
@@ -326,16 +319,14 @@ export default function App() {
                           <div className={`tx-amount ${isReceita ? 'revenue' : 'expense'}`}>
                             {isReceita ? '+ ' : '- '}{showBalance ? formatBRL(t.valor) : '•••••'}
                           </div>
-                          {!isAuto && (
-                            <button
-                              type="button"
-                              style={{ background: 'none', border: 'none', color: '#71717a', fontSize: 14, cursor: 'pointer', padding: 4 }}
-                              title="Excluir lançamento"
-                              onClick={() => handleDeleteTransaction(t)}
-                            >
-                              🗑️
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            style={{ background: 'none', border: 'none', color: '#71717a', fontSize: 14, cursor: 'pointer', padding: 4 }}
+                            title="Excluir lançamento"
+                            onClick={() => handleDeleteTransaction(t)}
+                          >
+                            🗑️
+                          </button>
                         </div>
                       </div>
                     )
