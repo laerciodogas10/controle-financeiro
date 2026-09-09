@@ -27,6 +27,25 @@ function resolveSaleDate(sale: any): Date | null {
   return null
 }
 
+/**
+ * Verifica se o documento é um registro de "baixa de fiado" (o Didi Gás cria
+ * uma venda extra tipo PAGAMENTO FIADO quando você recebe um fiado). Esse
+ * registro NÃO deve contar como lucro extra: o lucro da venda original (à
+ * vista ou fiado) já foi contado no dia em que a venda aconteceu. Contar de
+ * novo aqui duplicaria o lucro no dia em que a baixa foi dada.
+ */
+function isFiadoPaymentEntry(sale: any): boolean {
+  if (sale.produtoNome && String(sale.produtoNome).toUpperCase().includes('PAGAMENTO FIADO')) {
+    return true
+  }
+  if (Array.isArray(sale.items)) {
+    return sale.items.some((item: any) =>
+      item?.produtoNome && String(item.produtoNome).toUpperCase().includes('PAGAMENTO FIADO')
+    )
+  }
+  return false
+}
+
 function summarize(snap: any, start: Date, end: Date) {
   let faturamento = 0
   let lucro = 0
@@ -35,6 +54,7 @@ function summarize(snap: any, start: Date, end: Date) {
   snap.forEach((doc: any) => {
     const sale = doc.data() as any
     if (sale.status === 'CANCELADO') return
+    if (isFiadoPaymentEntry(sale)) return
 
     const saleDate = resolveSaleDate(sale)
     // Só descarta se a data existir E estiver claramente fora do dia.
