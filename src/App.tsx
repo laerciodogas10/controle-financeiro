@@ -355,52 +355,67 @@ export default function App() {
                 </div>
               ) : (
                 <div className="transactions-list">
-                  {transactions.map((t) => {
-                    const isReceita = t.tipo === 'receita'
-                    const catMeta = getCategoryMeta(t.categoria, t.tipo)
-                    const formattedDateStr = formatDate(t.createdAt)
-                    const isAuto = t.id?.startsWith('auto_venda_gas_')
+                  {(() => {
+                    let lastDayKey: string | null = null
+                    return transactions.map((t) => {
+                      const isReceita = t.tipo === 'receita'
+                      const catMeta = getCategoryMeta(t.categoria, t.tipo)
+                      const formattedDateStr = formatDate(t.createdAt)
+                      const isAuto = t.id?.startsWith('auto_venda_gas_')
 
-                    return (
-                      <div key={t.id} className="transaction-card">
-                        <div className="tx-info">
-                          <div className={`tx-icon ${isReceita ? 'revenue' : 'expense'}`}>
-                            {catMeta.emoji}
-                          </div>
-                          <div>
-                            <div className="tx-title" style={{ textTransform: 'capitalize' }}>
-                              {catMeta.label}
-                              {isAuto && (
-                                <span style={{ fontSize: 10, color: '#a1a1aa', marginLeft: 6, fontWeight: 400 }}>
-                                  (auto)
-                                </span>
-                              )}
+                      const itemDate = new Date(getDateMs(t.createdAt))
+                      const dayKey = itemDate.toDateString()
+                      const showSeparator = dayKey !== lastDayKey
+                      lastDayKey = dayKey
+
+                      return (
+                        <div key={t.id}>
+                          {showSeparator && (
+                            <div style={{ fontSize: 12, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', padding: '12px 4px 6px', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: 8 }}>
+                              {getDayLabel(itemDate)}
                             </div>
-                            {t.descricao && (
-                              <div className="tx-sub">{t.descricao}</div>
-                            )}
-                            {formattedDateStr && (
-                              <div className="tx-sub" style={{ fontSize: 11, color: '#71717a' }}>{formattedDateStr}</div>
-                            )}
-                          </div>
-                        </div>
+                          )}
+                          <div className="transaction-card">
+                            <div className="tx-info">
+                              <div className={`tx-icon ${isReceita ? 'revenue' : 'expense'}`}>
+                                {catMeta.emoji}
+                              </div>
+                              <div>
+                                <div className="tx-title" style={{ textTransform: 'capitalize' }}>
+                                  {catMeta.label}
+                                  {isAuto && (
+                                    <span style={{ fontSize: 10, color: '#a1a1aa', marginLeft: 6, fontWeight: 400 }}>
+                                      (auto)
+                                    </span>
+                                  )}
+                                </div>
+                                {t.descricao && (
+                                  <div className="tx-sub">{t.descricao}</div>
+                                )}
+                                {formattedDateStr && (
+                                  <div className="tx-sub" style={{ fontSize: 11, color: '#71717a' }}>{formattedDateStr}</div>
+                                )}
+                              </div>
+                            </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div className={`tx-amount ${isReceita ? 'revenue' : 'expense'}`}>
-                            {isReceita ? '+ ' : '- '}{showBalance ? formatBRL(t.valor) : '•••••'}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <div className={`tx-amount ${isReceita ? 'revenue' : 'expense'}`}>
+                                {isReceita ? '+ ' : '- '}{showBalance ? formatBRL(t.valor) : '•••••'}
+                              </div>
+                              <button
+                                type="button"
+                                style={{ background: 'none', border: 'none', color: '#71717a', fontSize: 14, cursor: 'pointer', padding: 4 }}
+                                title="Excluir lançamento"
+                                onClick={() => handleDeleteTransaction(t)}
+                              >
+                                🗑️
+                              </button>
+                            </div>
                           </div>
-                          <button
-                            type="button"
-                            style={{ background: 'none', border: 'none', color: '#71717a', fontSize: 14, cursor: 'pointer', padding: 4 }}
-                            title="Excluir lançamento"
-                            onClick={() => handleDeleteTransaction(t)}
-                          >
-                            🗑️
-                          </button>
                         </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })
+                  })()}
                 </div>
               )}
             </section>
