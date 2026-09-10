@@ -7,6 +7,7 @@ import { getAllExpenses, deleteExpense } from './services/expenses'
 import { getAllRevenues, deleteRevenue, syncDailyRevenue } from './services/revenues'
 import { TransactionModal } from './components/TransactionModal'
 import { SettingsModal } from './components/SettingsModal'
+import { ChartsPage } from './components/ChartsPage'
 import { getStoredCategories, getStoredRevenueCategories } from './services/categories'
 import type { Expense, Revenue, TransactionItem } from './types'
 
@@ -79,6 +80,9 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalType, setModalType] = useState<'despesa' | 'receita'>('despesa')
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+
+  // Aba ativa: 'home' | 'charts'
+  const [activeTab, setActiveTab] = useState<'home' | 'charts'>('home')
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -248,6 +252,8 @@ export default function App() {
               Tentar novamente
             </button>
           </div>
+        ) : activeTab === 'charts' ? (
+          <ChartsPage transactions={transactions} />
         ) : (
           <>
             <div className="balance-card">
@@ -422,6 +428,26 @@ export default function App() {
           </>
         )}
       </main>
+
+      {/* Barra de Navegação Inferior */}
+      <nav className="bottom-nav">
+        <button
+          type="button"
+          className={`bottom-nav-item ${activeTab === 'home' ? 'active' : ''}`}
+          onClick={() => setActiveTab('home')}
+        >
+          <span className="nav-icon">🏠</span>
+          <span className="nav-label">Início</span>
+        </button>
+        <button
+          type="button"
+          className={`bottom-nav-item ${activeTab === 'charts' ? 'active' : ''}`}
+          onClick={() => setActiveTab('charts')}
+        >
+          <span className="nav-icon">📊</span>
+          <span className="nav-label">Gráficos</span>
+        </button>
+      </nav>
 
       <TransactionModal
         isOpen={isModalOpen}

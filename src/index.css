@@ -100,7 +100,7 @@ body {
 
 /* Dashboard Content */
 .main-content {
-  padding: 10px 20px 40px;
+  padding: 10px 20px 90px;
   flex: 1;
 }
 
@@ -701,4 +701,321 @@ body {
   color: #ffffff;
   font-weight: 700;
   font-size: 20px;
+}
+
+/* ========================================================= */
+/* BOTTOM NAVIGATION BAR                                      */
+/* ========================================================= */
+.bottom-nav {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background: rgba(18, 18, 20, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 0 14px;
+  z-index: 500;
+  max-width: 480px;
+  width: 100%;
+}
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 28px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  color: #71717a;
+}
+
+.bottom-nav-item:hover {
+  color: #a1a1aa;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.bottom-nav-item.active {
+  color: #6366f1;
+}
+
+.nav-icon {
+  font-size: 22px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.bottom-nav-item.active .nav-icon {
+  transform: scale(1.15);
+}
+
+.nav-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ========================================================= */
+/* CHARTS PAGE                                                */
+/* ========================================================= */
+.charts-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 8px;
+}
+
+/* Seletor de Período */
+.period-selector {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.period-selector::-webkit-scrollbar {
+  display: none;
+}
+
+.period-pill {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid #27272a;
+  background: #18181b;
+  color: #a1a1aa;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.period-pill.active {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+}
+
+/* Cards de Resumo do Período */
+.charts-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.summary-mini-card {
+  background: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 16px;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.summary-label {
+  font-size: 11px;
+  color: #71717a;
+  font-weight: 500;
+}
+
+.summary-value {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.summary-value.green { color: #10b981; }
+.summary-value.red   { color: #ef4444; }
+
+/* Cards dos Gráficos */
+.chart-card {
+  background: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 20px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chart-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chart-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f4f4f5;
+  margin: 0;
+}
+
+.chart-subtitle {
+  font-size: 11px;
+  color: #71717a;
+  margin-top: 2px;
+  display: block;
+}
+
+/* Toggle Despesas / Receitas */
+.type-toggle-pill {
+  display: flex;
+  background: #27272a;
+  border-radius: 12px;
+  padding: 3px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.toggle-sub-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: #71717a;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.toggle-sub-pill.active-red {
+  background: #ef4444;
+  color: white;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.toggle-sub-pill.active-green {
+  background: #10b981;
+  color: white;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+/* Gráfico de Rosca */
+.donut-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.donut-canvas-box {
+  position: relative;
+  width: 220px;
+  height: 220px;
+}
+
+.donut-center-info {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.center-label {
+  font-size: 11px;
+  color: #71717a;
+  font-weight: 500;
+}
+
+.center-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: #f4f4f5;
+  margin-top: 2px;
+}
+
+/* Legenda por Categoria (abaixo da rosca) */
+.category-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.category-breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.cat-meta-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cat-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cat-emoji {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.cat-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #e4e4e7;
+}
+
+.cat-meta-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cat-pct {
+  font-size: 12px;
+  color: #71717a;
+  font-weight: 600;
+  min-width: 30px;
+  text-align: right;
+}
+
+.cat-amount {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f4f4f5;
+}
+
+/* Gráfico de Barras */
+.bar-canvas-box {
+  width: 100%;
+  position: relative;
+}
+
+/* Estado Vazio */
+.chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 0;
+  color: #52525b;
+  font-size: 14px;
+  font-weight: 500;
 }
