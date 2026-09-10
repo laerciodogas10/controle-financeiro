@@ -707,19 +707,19 @@ body {
 /* BOTTOM NAVIGATION BAR                                      */
 /* ========================================================= */
 .bottom-nav {
-  position: sticky;
+  position: fixed;
   bottom: 0;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   justify-content: space-around;
   align-items: center;
-  background: rgba(18, 18, 20, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(18, 18, 20, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 10px 0 14px;
-  z-index: 500;
+  padding: 10px 0 16px;
+  z-index: 999;
   max-width: 480px;
   width: 100%;
 }
