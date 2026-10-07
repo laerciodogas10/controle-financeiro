@@ -5,6 +5,14 @@
   margin: 0;
   padding: 0;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+html {
+  height: 100%;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
 }
 
 body {
@@ -12,6 +20,13 @@ body {
   background: #09090b;
   color: #f4f4f5;
   min-height: 100vh;
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
 }
 
 /* Container principal */
@@ -1018,4 +1033,9 @@ body {
   color: #52525b;
   font-size: 14px;
   font-weight: 500;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
 }

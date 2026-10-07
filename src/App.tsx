@@ -8,6 +8,7 @@ import { getAllRevenues, deleteRevenue, syncDailyRevenue } from './services/reve
 import { TransactionModal } from './components/TransactionModal'
 import { SettingsModal } from './components/SettingsModal'
 import { ChartsPage } from './components/ChartsPage'
+import { MonthPickerModal } from './components/MonthPickerModal'
 import { getStoredCategories, getStoredRevenueCategories } from './services/categories'
 import type { Expense, Revenue, TransactionItem } from './types'
 
@@ -83,6 +84,11 @@ export default function App() {
 
   // Aba ativa: 'home' | 'charts'
   const [activeTab, setActiveTab] = useState<'home' | 'charts'>('home')
+
+  // Mês/Ano selecionado para filtrar transações
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear())
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth())
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -191,16 +197,31 @@ export default function App() {
   if (checkingAuth) return null
   if (!user) return <Login />
 
+  // Filtra transações pelo mês/ano selecionado
+  const filteredTransactions = transactions.filter((t) => {
+    const d = new Date(getDateMs(t.createdAt))
+    return d.getFullYear() === selectedYear && d.getMonth() === selectedMonth
+  })
+
+  const filteredReceitas = filteredTransactions
+    .filter((t) => t.tipo === 'receita')
+    .reduce((sum, t) => sum + t.valor, 0)
+
+  const filteredDespesas = filteredTransactions
+    .filter((t) => t.tipo === 'despesa')
+    .reduce((sum, t) => sum + t.valor, 0)
+
   const saldoAtual = saldoAjuste + totalReceitas - totalDespesas
 
-  const currentMonthName = new Date().toLocaleDateString('pt-BR', { month: 'long' })
+  const selectedMonthDate = new Date(selectedYear, selectedMonth, 1)
+  const currentMonthName = selectedMonthDate.toLocaleDateString('pt-BR', { month: 'long' })
   const capitalizedMonth = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1)
 
-  const receitaDoDia = transactions
+  const receitaDoDia = filteredTransactions
     .filter((t) => t.tipo === 'receita' && isSameDay(new Date(getDateMs(t.createdAt)), selectedDay))
     .reduce((sum, t) => sum + t.valor, 0)
 
-  const despesaDoDia = transactions
+  const despesaDoDia = filteredTransactions
     .filter((t) => t.tipo === 'despesa' && isSameDay(new Date(getDateMs(t.createdAt)), selectedDay))
     .reduce((sum, t) => sum + t.valor, 0)
 
@@ -229,10 +250,15 @@ export default function App() {
             <span>⚙️ Definições</span>
           </button>
 
-          <div className="month-selector">
-            <span>{capitalizedMonth}</span>
+          <button
+            type="button"
+            className="month-selector"
+            onClick={() => setIsMonthPickerOpen(true)}
+            title="Selecionar mês"
+          >
+            <span>{capitalizedMonth} {selectedYear !== new Date().getFullYear() ? selectedYear : ''}</span>
             <span style={{ fontSize: 10 }}>▼</span>
-          </div>
+          </button>
 
           <button className="logout-btn" title="Sair" onClick={() => signOut(auth)}>
             🚪
@@ -271,7 +297,7 @@ export default function App() {
                   <div className="pill-details">
                     <span className="pill-label">Receitas</span>
                     <span className="pill-value green">
-                      {showBalance ? formatBRL(totalReceitas) : '•••••'}
+                      {showBalance ? formatBRL(filteredReceitas) : '•••••'}
                     </span>
                   </div>
                 </div>
@@ -281,7 +307,7 @@ export default function App() {
                   <div className="pill-details">
                     <span className="pill-label">Despesas</span>
                     <span className="pill-value red">
-                      {showBalance ? formatBRL(totalDespesas) : '•••••'}
+                      {showBalance ? formatBRL(filteredDespesas) : '•••••'}
                     </span>
                   </div>
                 </div>
@@ -349,21 +375,21 @@ export default function App() {
             <section>
               <div className="section-title">
                 <h2>Histórico</h2>
-                <span className="badge-count">{transactions.length} lançamentos</span>
+                <span className="badge-count">{filteredTransactions.length} lançamentos</span>
               </div>
 
-              {transactions.length === 0 ? (
+              {filteredTransactions.length === 0 ? (
                 <div className="empty-state">
-                  <p>Nenhum lançamento registrado ainda.</p>
+                  <p>Nenhum lançamento em {capitalizedMonth}{selectedYear !== new Date().getFullYear() ? ` de ${selectedYear}` : ''}.</p>
                   <span style={{ fontSize: 12, color: '#71717a', display: 'block', marginTop: 4 }}>
-                    Use os botões acima para registrar.
+                    {transactions.length > 0 ? 'Selecione outro mês para ver lançamentos.' : 'Use os botões acima para registrar.'}
                   </span>
                 </div>
               ) : (
                 <div className="transactions-list">
                   {(() => {
                     let lastDayKey: string | null = null
-                    return transactions.map((t) => {
+                    return filteredTransactions.map((t) => {
                       const isReceita = t.tipo === 'receita'
                       const catMeta = getCategoryMeta(t.categoria, t.tipo)
                       const formattedDateStr = formatDate(t.createdAt)
@@ -465,6 +491,18 @@ export default function App() {
           load()
         }}
         onCategoriesUpdated={load}
+      />
+
+      <MonthPickerModal
+        isOpen={isMonthPickerOpen}
+        selectedYear={selectedYear}
+        selectedMonth={selectedMonth}
+        onSelect={(y, m) => {
+          setSelectedYear(y)
+          setSelectedMonth(m)
+          setSelectedDay(new Date(y, m, 1))
+        }}
+        onClose={() => setIsMonthPickerOpen(false)}
       />
     </div>
   )
