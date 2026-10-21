@@ -1035,6 +1035,194 @@ body {
   font-weight: 500;
 }
 
+/* ========================================================= */
+/* AUDIO EXPENSE MODAL                                        */
+/* ========================================================= */
+
+/* Botão de microfone na tela inicial (entre os botões de ação) */
+.btn-audio-mic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
+  width: 100%;
+  margin-bottom: 24px;
+}
+.btn-audio-mic:active { transform: scale(0.97); }
+
+/* Container do modal de áudio (override do dark-modal-container) */
+.audio-modal {
+  padding: 20px 20px 28px;
+  gap: 0 !important;
+}
+
+/* Stage de gravação / idle / erro */
+.audio-stage-idle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0 8px;
+  gap: 6px;
+}
+
+.audio-hint {
+  font-size: 14px;
+  color: #a1a1aa;
+  text-align: center;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+.audio-hint em {
+  color: #f4f4f5;
+  font-style: normal;
+}
+.recording-hint {
+  color: #f87171;
+  font-weight: 600;
+}
+
+/* Botão de microfone grande */
+.mic-button {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.2s;
+  position: relative;
+  flex-shrink: 0;
+}
+.mic-button:active { transform: scale(0.93); }
+
+.mic-icon {
+  font-size: 38px;
+  line-height: 1;
+}
+
+/* Estado: aguardando */
+.mic-idle {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.45), 0 0 0 8px rgba(99, 102, 241, 0.12);
+}
+.mic-idle:hover {
+  box-shadow: 0 8px 40px rgba(99, 102, 241, 0.6), 0 0 0 12px rgba(99, 102, 241, 0.15);
+}
+
+/* Estado: gravando */
+.mic-recording {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  box-shadow: 0 8px 32px rgba(239, 68, 68, 0.45), 0 0 0 8px rgba(239, 68, 68, 0.12);
+  animation: mic-pulse 1.4s ease-in-out infinite;
+}
+
+/* Estado: processando */
+.mic-processing {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 8px 32px rgba(245, 158, 11, 0.4);
+  cursor: default;
+}
+
+/* Estado: erro */
+.mic-error {
+  background: linear-gradient(135deg, #374151, #1f2937);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  cursor: default;
+}
+
+/* Anel de progresso ao redor do botão de gravação */
+.mic-progress-ring {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 0;
+}
+.ring-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Timer */
+.audio-timer {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ef4444;
+  letter-spacing: -0.5px;
+  margin-top: 4px;
+}
+
+.audio-sub {
+  font-size: 12px;
+  color: #52525b;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.audio-error-msg {
+  font-size: 13px;
+  color: #f87171;
+  text-align: center;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 12px;
+  padding: 10px 14px;
+  width: 100%;
+}
+
+/* Spinner de processamento */
+.mic-spinner {
+  width: 36px;
+  height: 36px;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: block;
+}
+
+/* Cartão de despesa editável na tela de confirmação */
+.audio-expense-card {
+  background: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 20px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Animações */
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 8px 32px rgba(239, 68, 68, 0.45), 0 0 0 8px rgba(239, 68, 68, 0.12); }
+  50%       { box-shadow: 0 8px 40px rgba(239, 68, 68, 0.65), 0 0 0 18px rgba(239, 68, 68, 0.06); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.95); }
   to   { opacity: 1; transform: scale(1); }

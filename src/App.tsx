@@ -9,6 +9,7 @@ import { TransactionModal } from './components/TransactionModal'
 import { SettingsModal } from './components/SettingsModal'
 import { ChartsPage } from './components/ChartsPage'
 import { MonthPickerModal } from './components/MonthPickerModal'
+import { AudioExpenseModal } from './components/AudioExpenseModal'
 import { getStoredCategories, getStoredRevenueCategories } from './services/categories'
 import type { Expense, Revenue, TransactionItem } from './types'
 
@@ -81,6 +82,7 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalType, setModalType] = useState<'despesa' | 'receita'>('despesa')
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isAudioModalOpen, setIsAudioModalOpen] = useState(false)
 
   // Aba ativa: 'home' | 'charts'
   const [activeTab, setActiveTab] = useState<'home' | 'charts'>('home')
@@ -372,6 +374,16 @@ export default function App() {
               </button>
             </div>
 
+            <button
+              id="audio-mic-btn"
+              className="btn-audio-mic"
+              onClick={() => setIsAudioModalOpen(true)}
+              aria-label="Registrar despesa por áudio"
+            >
+              <span style={{ fontSize: 18 }}>🎙️</span>
+              Despesa por Áudio
+            </button>
+
             <section>
               <div className="section-title">
                 <h2>Histórico</h2>
@@ -503,6 +515,12 @@ export default function App() {
           setSelectedDay(new Date(y, m, 1))
         }}
         onClose={() => setIsMonthPickerOpen(false)}
+      />
+
+      <AudioExpenseModal
+        isOpen={isAudioModalOpen}
+        onClose={() => setIsAudioModalOpen(false)}
+        onAdded={load}
       />
     </div>
   )
