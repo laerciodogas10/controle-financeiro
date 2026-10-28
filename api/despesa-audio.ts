@@ -128,7 +128,7 @@ Instruções:
         },
         required: ['despesas'],
       },
-      temperature: 0.1,
+      thinkingConfig: { thinkingLevel: 'minimal' },
     },
   }
 
@@ -138,6 +138,7 @@ Instruções:
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
+      signal: AbortSignal.timeout(25000),
     })
   } catch (err) {
     console.error('[despesa-audio] Erro de rede ao chamar Gemini:', err)
