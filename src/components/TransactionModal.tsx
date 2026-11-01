@@ -30,6 +30,9 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
 
   const categories = type === 'despesa' ? expenseCategories : revenueCategories
 
+  // Sugestões de descrição para a categoria atual (deve vir ANTES de qualquer return condicional)
+  const descSuggestions = useMemo(() => getDescSuggestions(categoria), [categoria])
+
   useEffect(() => {
     setType(defaultType)
     const storedExp = getStoredCategories()
@@ -138,9 +141,6 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
   }
 
   const isDespesa = type === 'despesa'
-
-  // Sugestões de descrição para a categoria atual
-  const descSuggestions = useMemo(() => getDescSuggestions(categoria), [categoria, descricao])
 
   return (
     <>
