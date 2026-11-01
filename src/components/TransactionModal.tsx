@@ -208,19 +208,41 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
               </div>
             </div>
 
-            {/* Descrição */}
+            {/* Categorias — ANTES da Descrição */}
+            <div className="dark-input-row category-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span className="row-icon">🏷️</span>
+                <span style={{ fontSize: 13, color: '#a1a1aa', fontWeight: 600 }}>
+                  {isDespesa ? 'Categoria da Despesa' : 'Categoria da Receita'}
+                </span>
+              </div>
+              <div className="dark-category-pills" style={{ width: '100%', marginTop: 4 }}>
+                {categories.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`dark-cat-pill ${categoria === c.id ? 'active' : ''}`}
+                    onClick={() => { setCategoria(c.id); setDescricao('') }}
+                  >
+                    <span>{c.emoji}</span>
+                    <span>{c.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Descrição — com chips de sugestão baseados na categoria */}
             <div className="dark-input-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
                 <span className="row-icon">✏️</span>
                 <input
                   type="text"
                   className="dark-text-input"
-                  placeholder="Descrição"
+                  placeholder="Descrição (opcional)"
                   value={descricao}
                   onChange={(e) => setDescricao(e.target.value)}
                 />
               </div>
-              {/* Chips de sugestão de descrição */}
               {descSuggestions.length > 0 && (
                 <div className="dark-category-pills" style={{ width: '100%', paddingLeft: 30 }}>
                   {descSuggestions.map((s) => (
@@ -235,30 +257,6 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
                   ))}
                 </div>
               )}
-            </div>
-
-            {/* Categorias */}
-            <div className="dark-input-row category-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span className="row-icon">🏷️</span>
-                <span style={{ fontSize: 13, color: '#a1a1aa', fontWeight: 600 }}>
-                  {isDespesa ? 'Categoria da Despesa' : 'Categoria da Receita'}
-                </span>
-              </div>
-
-              <div className="dark-category-pills" style={{ width: '100%', marginTop: 4 }}>
-                {categories.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className={`dark-cat-pill ${categoria === c.id ? 'active' : ''}`}
-                    onClick={() => setCategoria(c.id)}
-                  >
-                    <span>{c.emoji}</span>
-                    <span>{c.label}</span>
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
 
