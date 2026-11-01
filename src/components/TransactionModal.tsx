@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { addExpense } from '../services/expenses'
 import { addRevenue } from '../services/revenues'
 import { DatePickerModal } from './DatePickerModal'
-import { getStoredCategories, getStoredRevenueCategories, CategoryItem } from '../services/categories'
+import { getStoredCategories, getStoredRevenueCategories, CategoryItem, getDescSuggestions, recordDescUsage } from '../services/categories'
 import type { ExpenseCategory } from '../types'
 
 interface Props {
@@ -116,8 +116,11 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
     try {
       if (type === 'despesa') {
         await addExpense((categoria || 'outros') as ExpenseCategory, val, descricao, 'app', customDate)
+        // Registra uso da descrição para sugestões futuras
+        if (descricao.trim()) recordDescUsage(categoria || 'outros', descricao)
       } else {
         await addRevenue(categoria || 'outros_receita', val, descricao, customDate)
+        if (descricao.trim()) recordDescUsage(categoria || 'outros_receita', descricao)
       }
       // Limpa formulário
       setAmountStr('0')
@@ -135,6 +138,9 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
   }
 
   const isDespesa = type === 'despesa'
+
+  // Sugestões de descrição para a categoria atual
+  const descSuggestions = useMemo(() => getDescSuggestions(categoria), [categoria, descricao])
 
   return (
     <>
@@ -203,15 +209,32 @@ export function TransactionModal({ isOpen, defaultType = 'despesa', onClose, onA
             </div>
 
             {/* Descrição */}
-            <div className="dark-input-row">
-              <span className="row-icon">✏️</span>
-              <input
-                type="text"
-                className="dark-text-input"
-                placeholder="Descrição"
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-              />
+            <div className="dark-input-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
+                <span className="row-icon">✏️</span>
+                <input
+                  type="text"
+                  className="dark-text-input"
+                  placeholder="Descrição"
+                  value={descricao}
+                  onChange={(e) => setDescricao(e.target.value)}
+                />
+              </div>
+              {/* Chips de sugestão de descrição */}
+              {descSuggestions.length > 0 && (
+                <div className="dark-category-pills" style={{ width: '100%', paddingLeft: 30 }}>
+                  {descSuggestions.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      className={`dark-cat-pill desc-suggestion-pill ${descricao === s ? 'active' : ''}`}
+                      onClick={() => setDescricao(descricao === s ? '' : s)}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Categorias */}
