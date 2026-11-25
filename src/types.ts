@@ -24,7 +24,7 @@ export interface Expense {
   categoria: ExpenseCategory
   valor: number
   descricao?: string
-  origem: 'app' | 'whatsapp'
+  origem: 'app' | 'whatsapp' | 'claude'
   createdAt?: Timestamp | Date
 }
 
