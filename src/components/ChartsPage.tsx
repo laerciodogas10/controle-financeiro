@@ -67,6 +67,7 @@ const PALETTE = [
 export function ChartsPage({ transactions }: ChartsPageProps) {
   const [period, setPeriod] = useState<PeriodFilter>('month')
   const [categoryType, setCategoryType] = useState<'despesa' | 'receita'>('despesa')
+  const [expandedCat, setExpandedCat] = useState<string | null>(null)
 
   // Filtragem por período
   const filteredTransactions = useMemo(() => {
@@ -110,11 +111,22 @@ export function ChartsPage({ transactions }: ChartsPageProps) {
   // 1. DADOS PARA O GRÁFICO DE ROSCA (POR CATEGORIA)
   const categoryData = useMemo(() => {
     const map: Record<string, number> = {}
+    // Detalhamento por descrição dentro de cada categoria
+    const descMap: Record<string, Record<string, { label: string; valor: number; count: number }>> = {}
     filteredTransactions
       .filter((t) => t.tipo === categoryType)
       .forEach((t) => {
         const cat = t.categoria || 'outros'
         map[cat] = (map[cat] || 0) + t.valor
+
+        const rawDesc = (t.descricao || '').trim()
+        const descKey = rawDesc.toLowerCase() || '__sem_descricao__'
+        if (!descMap[cat]) descMap[cat] = {}
+        if (!descMap[cat][descKey]) {
+          descMap[cat][descKey] = { label: rawDesc || 'Sem descrição', valor: 0, count: 0 }
+        }
+        descMap[cat][descKey].valor += t.valor
+        descMap[cat][descKey].count += 1
       })
 
     const entries = Object.entries(map).sort((a, b) => b[1] - a[1])
@@ -123,7 +135,15 @@ export function ChartsPage({ transactions }: ChartsPageProps) {
     const labels: string[] = []
     const values: number[] = []
     const colors: string[] = []
-    const breakdown: Array<{ id: string; label: string; emoji: string; valor: number; pct: number; color: string }> = []
+    const breakdown: Array<{
+      id: string
+      label: string
+      emoji: string
+      valor: number
+      pct: number
+      color: string
+      details: Array<{ label: string; valor: number; count: number; pct: number }>
+    }> = []
 
     entries.forEach(([catId, val], index) => {
       const meta = getCategoryMeta(catId, categoryType)
@@ -140,6 +160,9 @@ export function ChartsPage({ transactions }: ChartsPageProps) {
         valor: val,
         pct,
         color,
+        details: Object.values(descMap[catId] || {})
+          .sort((a, b) => b.valor - a.valor)
+          .map((d) => ({ ...d, pct: val > 0 ? Math.round((d.valor / val) * 100) : 0 })),
       })
     })
 
@@ -429,14 +452,14 @@ export function ChartsPage({ transactions }: ChartsPageProps) {
             <button
               type="button"
               className={`toggle-sub-pill ${categoryType === 'despesa' ? 'active-red' : ''}`}
-              onClick={() => setCategoryType('despesa')}
+              onClick={() => { setCategoryType('despesa'); setExpandedCat(null) }}
             >
               Despesas
             </button>
             <button
               type="button"
               className={`toggle-sub-pill ${categoryType === 'receita' ? 'active-green' : ''}`}
-              onClick={() => setCategoryType('receita')}
+              onClick={() => { setCategoryType('receita'); setExpandedCat(null) }}
             >
               Receitas
             </button>
@@ -461,19 +484,46 @@ export function ChartsPage({ transactions }: ChartsPageProps) {
 
             {/* Legenda Detalhada com Porcentagens */}
             <div className="category-breakdown-list">
-              {categoryData.breakdown.map((item) => (
-                <div key={item.id} className="category-breakdown-row">
-                  <div className="cat-meta-left">
-                    <span className="cat-color-dot" style={{ backgroundColor: item.color }} />
-                    <span className="cat-emoji">{item.emoji}</span>
-                    <span className="cat-name">{item.label}</span>
+              {categoryData.breakdown.map((item) => {
+                const isOpen = expandedCat === item.id
+                return (
+                  <div key={item.id} className={`category-breakdown-item ${isOpen ? 'open' : ''}`}>
+                    <button
+                      type="button"
+                      className="category-breakdown-row"
+                      aria-expanded={isOpen}
+                      onClick={() => setExpandedCat(isOpen ? null : item.id)}
+                    >
+                      <div className="cat-meta-left">
+                        <span className="cat-color-dot" style={{ backgroundColor: item.color }} />
+                        <span className="cat-emoji">{item.emoji}</span>
+                        <span className="cat-name">{item.label}</span>
+                      </div>
+                      <div className="cat-meta-right">
+                        <span className="cat-pct">{item.pct}%</span>
+                        <span className="cat-amount">{formatBRL(item.valor)}</span>
+                        <span className="cat-chevron" aria-hidden="true">›</span>
+                      </div>
+                    </button>
+
+                    {isOpen && (
+                      <div className="cat-details">
+                        {item.details.map((d) => (
+                          <div key={d.label} className="cat-detail-row">
+                            <div className="cat-detail-left">
+                              <span className="cat-detail-name">{d.label}</span>
+                              <span className="cat-detail-count">
+                                {d.count} {d.count === 1 ? 'lançamento' : 'lançamentos'} · {d.pct}%
+                              </span>
+                            </div>
+                            <span className="cat-detail-amount">{formatBRL(d.valor)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div className="cat-meta-right">
-                    <span className="cat-pct">{item.pct}%</span>
-                    <span className="cat-amount">{formatBRL(item.valor)}</span>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </>
         )}
